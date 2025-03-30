@@ -1,11 +1,13 @@
 from App.models import User
 from App.database import db
 
-def create_user(username, password):
-    newuser = User(username=username, password=password)
+def create_user(username, password, role):
+    if role not in ['landlord', 'tenant']:
+        return None, "Invalid role. Must be 'landlord' or 'tenant'."
+    newuser = User(username=username, password=password, role=role)
     db.session.add(newuser)
     db.session.commit()
-    return newuser
+    return newuser, None
 
 def get_user_by_username(username):
     return User.query.filter_by(username=username).first()
@@ -31,3 +33,10 @@ def update_user(id, username):
         return db.session.commit()
     return None
     
+def delete_user(id):
+    user = get_user(id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        return True
+    return False
