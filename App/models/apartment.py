@@ -7,7 +7,6 @@ class Apartment(db.Model):
     location = db.Column(db.String(200), nullable=False)
     price = db.Column(db.Float, nullable=False)
     landlord_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
     reviews = db.relationship('Review', backref='apartment', lazy=True)
     amenities = db.relationship('ApartmentAmenity', backref='apartment', lazy=True, cascade="all, delete-orphan")

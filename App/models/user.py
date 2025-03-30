@@ -11,7 +11,7 @@ class User(db.Model):
     apartments = db.relationship('Apartment', backref='owner', lazy=True)
     reviews = db.relationship('Review', backref='author', lazy=True)
 
-    def __init__(self, username, password, role):
+    def __init__(self, username, password, role='tenant'):
         self.username = username
         self.set_password(password)
         self.role = role
