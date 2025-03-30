@@ -7,19 +7,20 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(10), nullable=False)  # 'landlord' or 'tenant'
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
     apartments = db.relationship('Apartment', backref='owner', lazy=True)
     reviews = db.relationship('Review', backref='author', lazy=True)
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, role):
         self.username = username
         self.set_password(password)
+        self.role = role
 
     def get_json(self):
         return{
             'id': self.id,
-            'username': self.username
+            'username': self.username,
+            'role': self.role
         }
 
     def set_password(self, password):
