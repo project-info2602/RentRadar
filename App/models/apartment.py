@@ -31,5 +31,5 @@ class Apartment(db.Model):
             "price": self.price,
             "landlord_id": self.landlord_id,
             "reviews": [review.get_json() for review in self.reviews],
-            "amenities": [apartment_amenity.amenity.get_json() for apartment_amenity in self.apartment_amenities]
-        }
+            "amenities": [apartment_amenity.amenity.get_json() for apartment_amenity in self.amenities]
+    }

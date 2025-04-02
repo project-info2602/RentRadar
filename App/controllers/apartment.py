@@ -1,4 +1,4 @@
-from App.models import Apartment, User
+from App.models import Apartment, User, Amenity, ApartmentAmenity
 from App.database import db
 
 # Create a new apartment (only landlords can create)
@@ -38,11 +38,17 @@ def update_apartment(id, data):
         apartment.location = data.get('location', apartment.location)
         apartment.price = data.get('price', apartment.price)
         apartment.description = data.get('description', apartment.description)
-        # Assuming amenities is a list or a relationship
-        # if amenities are part of a list, this logic should update or append accordingly
+        
+        # Update amenities (this assumes you are passing a list of amenity IDs to update)
         if 'amenities' in data:
-            apartment.amenities = data['amenities']  # Adjust based on your model relationship
-        db.session.add(apartment)
+            amenities_ids = data['amenities']
+            apartment.amenities.clear()  # Remove existing amenities
+            for amenity_id in amenities_ids:
+                amenity = Amenity.query.get(amenity_id)
+                if amenity:
+                    apartment_amenity = ApartmentAmenity(apartment_id=apartment.id, amenity_id=amenity.id)
+                    db.session.add(apartment_amenity)
+        
         db.session.commit()
         return apartment
     return None
@@ -63,6 +69,11 @@ def search_apartments(filters):
         query = query.filter(Apartment.location.like(f"%{filters['location']}%"))
     if filters.get('price'):
         query = query.filter(Apartment.price <= filters['price'])
+    
     if filters.get('amenities'):
-        query = query.filter(Apartment.amenities.contains(filters['amenities']))
+        amenities = filters['amenities']
+        for amenity_id in amenities:
+            # Assume amenity_id is a list of amenity IDs to filter by
+            query = query.filter(Apartment.amenities.any(ApartmentAmenity.amenity_id == amenity_id))
+    
     return query.all()

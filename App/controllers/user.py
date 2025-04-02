@@ -20,12 +20,18 @@ def create_user(username, email, password, role):
     # Create the user object
     user = User(username=username, email=email, password=hashed_password, role=role)
 
-    # Add user to the session and commit
-    db.session.add(user)
-    db.session.commit()
+    try:
+        # Add user to the session and commit
+        db.session.add(user)
+        db.session.commit()
 
-    # Return the response with user data
-    return user
+        # Return the user data (without returning a tuple)
+        return user  # Return the user object directly
+    except Exception as e:
+        # Handle database errors
+        db.session.rollback()  # Rollback any changes in case of error
+        return {"message": str(e)}, 500
+
 
 
 def get_user_by_username(username):
