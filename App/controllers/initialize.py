@@ -59,6 +59,8 @@ def initialize_sample_data():
     except Exception as e:
         print(f"Error initializing sample data: {e}")
 
+
+
 def initialize():
     db.drop_all()
     db.create_all()
