@@ -19,5 +19,5 @@ class Review(db.Model):
             "rating": self.rating,
             "comment": self.comment,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "author": self.author.username  # Include username of the tenant
-    }
+            "author": self.author.username if self.author else None  # Prevent AttributeError
+        }

@@ -2,19 +2,26 @@ from App.models import Apartment, User
 from App.database import db
 
 # Create a new apartment (only landlords can create)
-def create_apartment(landlord_id, data):
+def create_apartment(title, description, location, price, landlord_id):
     landlord = User.query.get(landlord_id)
-    if landlord and landlord.role == 'landlord':
-        new_apartment = Apartment(
-            landlord_id=landlord_id,
-            location=data['location'],
-            price=data['price'],
-            amenities=data['amenities']
-        )
-        db.session.add(new_apartment)
-        db.session.commit()
-        return new_apartment
-    return None, "Only landlords can create apartments"
+    if not landlord:
+        return {"message": "Landlord not found."}, 404
+    
+    if landlord.role != 'landlord':
+        return {"message": "Only landlords can create apartments."}, 403
+
+    apartment = Apartment(
+        title=title,
+        description=description,
+        location=location,
+        price=price,
+        landlord_id=landlord_id
+    )
+    
+    db.session.add(apartment)
+    db.session.commit()
+
+    return apartment
 
 # Get all apartments
 def get_apartments():
@@ -30,7 +37,11 @@ def update_apartment(id, data):
     if apartment:
         apartment.location = data.get('location', apartment.location)
         apartment.price = data.get('price', apartment.price)
-        apartment.amenities = data.get('amenities', apartment.amenities)
+        apartment.description = data.get('description', apartment.description)
+        # Assuming amenities is a list or a relationship
+        # if amenities are part of a list, this logic should update or append accordingly
+        if 'amenities' in data:
+            apartment.amenities = data['amenities']  # Adjust based on your model relationship
         db.session.add(apartment)
         db.session.commit()
         return apartment

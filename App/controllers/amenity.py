@@ -3,10 +3,26 @@ from App.database import db
 
 # Create a new amenity
 def create_amenity(name):
-    new_amenity = Amenity(name=name)
-    db.session.add(new_amenity)
-    db.session.commit()
-    return new_amenity
+    try:
+        amenity = Amenity(name=name)
+        db.session.add(amenity)
+        db.session.commit()
+        return amenity
+    except Exception as e:
+        print(f"Error creating amenity {name}: {e}")
+        return None
+
+
+def link_apartment_to_amenity(apartment_id, amenity_id):
+    try:
+        apartment_amenity = ApartmentAmenity(apartment_id=apartment_id, amenity_id=amenity_id)
+        db.session.add(apartment_amenity)
+        db.session.commit()
+        return apartment_amenity
+    except Exception as e:
+        print(f"Error linking apartment {apartment_id} to amenity {amenity_id}: {e}")
+        return None
+
 
 # Get all amenities
 def get_all_amenities():
