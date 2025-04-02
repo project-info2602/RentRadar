@@ -34,35 +34,37 @@ def get_amenity(id):
 
 # Delete an amenity by ID
 def delete_amenity(id):
-    amenity = get_amenity(id)
-    if amenity:
-        db.session.delete(amenity)
-        db.session.commit()
-        return True
-    return False
+    try:
+        amenity = get_amenity(id)
+        if amenity:
+            db.session.delete(amenity)
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Error deleting amenity {id}: {e}")
+        return False
 
-# Add an amenity to an apartment
-def add_amenity_to_apartment(apartment_id, amenity_id):
-    apartment = Apartment.query.get(apartment_id)
-    amenity = Amenity.query.get(amenity_id)
-    
-    if apartment and amenity:
-        new_apartment_amenity = ApartmentAmenity(apartment_id=apartment.id, amenity_id=amenity.id)
-        db.session.add(new_apartment_amenity)
-        db.session.commit()
-        return new_apartment_amenity
-    return None
-
-# Get all amenities associated with an apartment
 def get_amenities_for_apartment(apartment_id):
-    apartment_amenities = ApartmentAmenity.query.filter_by(apartment_id=apartment_id).all()
-    return [apartment_amenity.get_json() for apartment_amenity in apartment_amenities]
+    try:
+        apartment = Apartment.query.get(apartment_id)
+        if not apartment:
+            return []
+        
+        amenities = db.session.query(Amenity).join(ApartmentAmenity).filter(ApartmentAmenity.apartment_id == apartment_id).all()
+        return [amenity.name for amenity in amenities]
+    except Exception as e:
+        print(f"Error fetching amenities for apartment {apartment_id}: {e}")
+        return []
 
-# Remove an amenity from an apartment
 def remove_amenity_from_apartment(apartment_id, amenity_id):
-    apartment_amenity = ApartmentAmenity.query.filter_by(apartment_id=apartment_id, amenity_id=amenity_id).first()
-    if apartment_amenity:
-        db.session.delete(apartment_amenity)
-        db.session.commit()
-        return True
-    return False
+    try:
+        apartment_amenity = ApartmentAmenity.query.filter_by(apartment_id=apartment_id, amenity_id=amenity_id).first()
+        if apartment_amenity:
+            db.session.delete(apartment_amenity)
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Error removing amenity {amenity_id} from apartment {apartment_id}: {e}")
+        return False
