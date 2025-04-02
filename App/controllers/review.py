@@ -2,20 +2,11 @@ from App.models import Review, User, Apartment
 from App.database import db
 
 # Create a new review (only verified tenants can leave reviews)
-def create_review(tenant_id, apartment_id, data):
-    tenant = User.query.get(tenant_id)
-    apartment = Apartment.query.get(apartment_id)
-    if tenant and tenant.role == 'tenant' and tenant.is_verified and apartment:
-        new_review = Review(
-            tenant_id=tenant_id,
-            apartment_id=apartment_id,
-            rating=data['rating'],
-            comment=data['comment']
-        )
-        db.session.add(new_review)
-        db.session.commit()
-        return new_review
-    return None, "Only verified tenants can leave reviews for apartments they have rented"
+def create_review(user_id, apartment_id, rating, comment):
+    review = Review(user_id=user_id, apartment_id=apartment_id, rating=rating, comment=comment)
+    db.session.add(review)
+    db.session.commit()
+    return review
 
 # Get all reviews for an apartment
 def get_reviews(apartment_id):
