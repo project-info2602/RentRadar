@@ -28,7 +28,8 @@ AMENITIES = [
     "Walk-in Closets",
     "Central Heating",
     "Fireplace",
-    "Beach Access"
+    "Beach Access",
+    "Parking"
 ]
 
 LOCATIONS = [

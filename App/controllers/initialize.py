@@ -10,9 +10,12 @@ from App.controllers.apartment import create_apartment
 from App.controllers.review import create_review
 
 from App.database import db
-from App.constants import AMENITIES, LOCATIONS  # Import constants from App.constant
+from App.constants import AMENITIES, LOCATIONS
+from App.sampledata import *
+import random
 
-def initialize_sample_data():
+
+def initialize_sample_data_SOME():
     try:
         # Create some amenities directly from the AMENITIES constant list
         selected_amenities = ['Swimming Pool', 'Gym/Fitness Center', 'Wi-Fi']
@@ -75,7 +78,71 @@ def initialize_sample_data():
         print(f"Error initializing sample data: {e}")
 
 
+def initialize_sample_data_ALL():
+    try:
+        # Create landlords
+        
+        landlords = []
+        for username, email, password in LANDLORDS_DATA:
+            landlord = create_landlord(username, email, password)
+            if not landlord:
+                raise Exception(f"Failed to create landlord {username}.")
+            landlords.append(landlord)
+            #print(f"Created landlord: {landlord.username}")
+
+        # Apartments data (without amenities and location)
+        
+        apartments = []
+        for title, description, price in APARTMENTS_DATA:
+            landlord = random.choice(landlords)  # Randomly assign landlord for each apartment
+            # Randomly select amenities (4 random amenities from AMENITIES list)
+            selected_amenities = random.sample(AMENITIES, 4)
+            # Randomly assign a location from LOCATIONS list
+            location = random.choice(LOCATIONS)
+
+            apartment = create_apartment(title, description, location, price, landlord.id, selected_amenities)
+            if not apartment:
+                raise Exception(f"Failed to create apartment {title}.")
+            apartments.append(apartment)
+            #print(f"Created apartment: {apartment.title}")
+            
+            # Link the apartment to amenities
+            apartment.amenities = selected_amenities
+            db.session.commit()
+            #print(f"Linked apartment '{apartment.title}' to amenities: {', '.join(selected_amenities)}")
+
+
+        for tenant_data in TENANTS_DATA:
+            # Randomly select an apartment and get its lease_code
+            selected_apartment = random.choice(apartments)
+            lease_code = selected_apartment.lease_code  # Get the lease_code from the selected apartment
+
+            # Create tenant with the selected lease_code
+            tenant = create_tenant(tenant_data[0], tenant_data[1], tenant_data[2], lease_code=lease_code)
+            if not tenant:
+                print(f"Failed to create tenant {tenant_data[0]}.")
+                continue  # Skip this tenant creation and move to the next one
+
+            # Manually assign the apartment's lease_code to the tenant
+            tenant.apartment = selected_apartment  # Associate the tenant with the selected apartment
+            db.session.commit()
+            #print(f"Created tenant: {tenant.username} and assigned to apartment: {selected_apartment.title}")
+
+            # Randomly select a review from the predefined list
+            review_message, rating = random.choice(REVIEWS_DATA)  # Randomly choose a review and its rating
+            review = create_review(tenant.id, selected_apartment.id, rating, review_message)
+            if not review:
+                print(f"Failed to create review for tenant {tenant.username}.")
+                continue  # Skip this review creation and move to the next tenant
+
+            #print(f"Created review for tenant {tenant.username} with rating {rating} for apartment {selected_apartment.title}")
+
+    except Exception as e:
+        print(f"Error initializing sample data: {e}")
+
+
 def initialize():
     db.drop_all()
     db.create_all()
-    initialize_sample_data()
+    #initialize_sample_data_SOME()
+    initialize_sample_data_ALL()
