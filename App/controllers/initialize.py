@@ -1,56 +1,71 @@
-from App.models.user import User
-from App.models.amenity import Amenity, ApartmentAmenity
+# In App/initialize.py
+from App.models.landlord import Landlord
+from App.models.tenant import Tenant
 from App.models.apartment import Apartment
 from App.models.review import Review
 
-from App.controllers.user import create_user
-from App.controllers.amenity import create_amenity, link_apartment_to_amenity
+from App.controllers.landlord import create_landlord
+from App.controllers.tenant import create_tenant
 from App.controllers.apartment import create_apartment
 from App.controllers.review import create_review
 
 from App.database import db
+from App.constants import AMENITIES, LOCATIONS  # Import constants from App.constant
 
 def initialize_sample_data():
     try:
-        # Create some amenities
-        pool = create_amenity('Swimming Pool')
-        gym = create_amenity('Gym')
+        # Create some amenities directly from the AMENITIES constant list
+        selected_amenities = ['Swimming Pool', 'Gym/Fitness Center', 'Wi-Fi']
 
-        if pool and gym:
-            print(f"Created amenities: {pool.name}, {gym.name}")
-        else:
-            raise Exception("Failed to create amenities.")
+        # Validate amenities to ensure they are in the AMENITIES constant list
+        for amenity in selected_amenities:
+            if amenity not in AMENITIES:
+                raise Exception(f"Invalid amenity: {amenity} is not in the predefined list of amenities.")
 
-        # Create a user (landlord)
-        bob = create_user('bob', 'bob@bobmail.com', 'bobpass', 'landlord')
+        # Create a landlord
+        bob = create_landlord('bob', 'bob@bobmail.com', 'bobpass')
         if not bob:
-            raise Exception("Failed to create user Bob.")
-        print(f"Created user: {bob.username}")
+            raise Exception("Failed to create landlord Bob.")
+        print(f"Created landlord: {bob.username}")
 
-        # Create an apartment for Bob
+        # Create an apartment for Bob with a location from the LOCATIONS list
+        location = 'Port of Spain'  # Example location, can be randomized or selected
+        if location not in LOCATIONS:
+            raise Exception(f"Invalid location: {location} is not in the predefined list of locations.")
+
         apartment_1 = create_apartment(
             'Spacious 1-Bedroom Apartment',
             'Cozy and modern apartment with all amenities.',
-            '456 Oak St, Cityville',
+            location,  # Assigned location
             1200.00,
-            bob.id
+            bob.id,
+            selected_amenities
         )
         if not apartment_1:
             raise Exception("Failed to create apartment.")
         print(f"Created apartment: {apartment_1.title}")
 
         # Link the apartment to amenities
-        if pool and gym:
-            link_apartment_to_amenity(apartment_1.id, pool.id)
-            link_apartment_to_amenity(apartment_1.id, gym.id)
-            print(f"Linked apartment '{apartment_1.title}' to amenities '{pool.name}' and '{gym.name}'")
+        apartment_1.amenities = selected_amenities
+        db.session.commit()
+        print(f"Linked apartment '{apartment_1.title}' to amenities: {', '.join(selected_amenities)}")
 
-        # Create a review for the apartment
-        tenant = create_user('john_doe', 'john.doe@tenantmail.com', 'johnpass', 'tenant')
+        # Generate lease code for tenant verification
+        lease_code = apartment_1.lease_code
+        print(f"Generated lease code for apartment '{apartment_1.title}': {lease_code}")
+
+        # Create a tenant (requires lease code)
+        tenant = create_tenant('john_doe', 'john.doe@tenantmail.com', 'johnpass', lease_code)
         if not tenant:
             raise Exception("Failed to create tenant John Doe.")
-        print(f"Created tenant: {tenant.username}")
+        
+        # Associate the tenant with the apartment
+        tenant.apartment = apartment_1  # Associate the tenant with the apartment
+        db.session.commit()
 
+        print(f"Created tenant: {tenant.username}")
+        
+        # Create a review for the apartment (tenant must be verified)
         review = create_review(tenant.id, apartment_1.id, 5, 'This is a great place to live!')
         if not review:
             raise Exception("Failed to create review.")
@@ -58,7 +73,6 @@ def initialize_sample_data():
 
     except Exception as e:
         print(f"Error initializing sample data: {e}")
-
 
 
 def initialize():

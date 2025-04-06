@@ -1,23 +1,26 @@
+from datetime import datetime
 from App.database import db
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    apartment_id = db.Column(db.Integer, db.ForeignKey('apartment.id'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)  # 1 to 5 stars
     comment = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    rating = db.Column(db.Integer, nullable=False)
 
-    def __repr__(self):
-        return f"<Review {self.rating} stars by User {self.user_id}>"
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), nullable=False)  # Reference to Tenant
+    tenant = db.relationship('Tenant', back_populates='reviews')  # Define reverse relationship
+
+    apartment_id = db.Column(db.Integer, db.ForeignKey('apartment.id'), nullable=False)  # Reference to Apartment
+    apartment = db.relationship('Apartment', back_populates='reviews')  # Define reverse relationship
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Automatically set the current time when a review is created
 
     def get_json(self):
+        """Convert the Review object to JSON format."""
         return {
             "id": self.id,
-            "user_id": self.user_id,
-            "apartment_id": self.apartment_id,
+            "content": self.content,
             "rating": self.rating,
-            "comment": self.comment,
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "author": self.author.username if self.author else None  # Prevent AttributeError
+            "tenant_id": self.tenant_id,
+            "apartment_id": self.apartment_id,
+            "created_at": self.created_at.isoformat()  # Convert to ISO format for easier handling
         }

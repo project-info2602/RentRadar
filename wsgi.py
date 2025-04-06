@@ -3,9 +3,22 @@ from flask import Flask
 from flask.cli import AppGroup
 
 from App.database import db, get_migrate
-from App.models import User, Apartment, Amenity, Review
+from App.constants import AMENITIES, LOCATIONS
+from App.models import Landlord, Tenant, Apartment, Review
 from App.main import create_app
-from App.controllers import create_user, get_all_users_json, get_all_users, create_apartment, get_apartments, create_amenity, get_all_amenities, create_review, get_reviews, initialize
+from App.controllers import (
+    create_landlord, 
+    create_tenant, 
+    get_all_landlords_json, 
+    get_all_landlords,
+    get_all_tenants_json, 
+    get_all_tenants, 
+    create_apartment, 
+    get_apartments, 
+    create_review, 
+    get_reviews, 
+    initialize
+)
 
 # Create app and migrate
 app = create_app()
@@ -20,51 +33,90 @@ def init():
     except Exception as e:
         print(f"Error initializing database: {e}")
 
-
 '''
-User Commands
+Landlord Commands
 '''
 
-user_cli = AppGroup('user', help='User object commands')  # User commands group
+landlord_cli = AppGroup('landlord', help='Landlord object commands')  # Landlord commands group
 
-@user_cli.command("create", help="Creates a user")
+@landlord_cli.command("create", help="Creates a landlord")
 @click.argument("username", default="rob")
 @click.argument("email", default="rob@example.com")
 @click.argument("password", default="robpass")
-@click.argument("role", default="tenant")
-def create_user_command(username, email, password, role):
+def create_landlord_command(username, email, password):
     try:
-        user = create_user(username, email, password, role)
-        if isinstance(user, User):  # Check if user creation was successful
+        landlord = create_landlord(username, email, password)
+        if isinstance(landlord, Landlord):  # Check if creation was successful
             print(f'{username} created successfully!')
         else:
-            print(f"Error: {user['message']}")  # Error message if creation failed
+            print(f"Error: {landlord['message']}")  # Error message if creation failed
     except Exception as e:
-        print(f"Error creating user: {e}")
+        print(f"Error creating landlord: {e}")
 
-
-@user_cli.command("list", help="Lists users in the database")
+@landlord_cli.command("list", help="Lists landlords in the database")
 @click.argument("format", default="string")
-def list_user_command(format):
+def list_landlord_command(format):
     try:
         if format == 'string':
-            users = get_all_users()
-            if users:
-                for user in users:
-                    print(f"{user.username} ({user.email}) - {user.role}")
+            landlords = get_all_landlords()
+            if landlords:
+                for landlord in landlords:
+                    print(f"{landlord.username} ({landlord.email})")
             else:
-                print("No users found.")
+                print("No landlords found.")
         else:
-            users_json = get_all_users_json()
-            if users_json:
-                print(users_json)
+            landlords_json = get_all_landlords_json()
+            if landlords_json:
+                print(landlords_json)
             else:
-                print("No users found.")
+                print("No landlords found.")
     except Exception as e:
-        print(f"Error fetching users: {e}")
+        print(f"Error fetching landlords: {e}")
 
-app.cli.add_command(user_cli)  # Add the user commands group to the app
+app.cli.add_command(landlord_cli)  # Add landlord commands group to the app
 
+'''
+Tenant Commands
+'''
+
+tenant_cli = AppGroup('tenant', help='Tenant object commands')  # Tenant commands group
+
+@tenant_cli.command("create", help="Creates a tenant")
+@click.argument("username")
+@click.argument("email")
+@click.argument("password")
+@click.argument("lease_code")  # Tenant creation now requires lease code
+def create_tenant_command(username, email, password, lease_code):
+    try:
+        tenant = create_tenant(username, email, password, lease_code)
+        if isinstance(tenant, Tenant):  # Check if creation was successful
+            print(f'{username} created successfully!')
+        else:
+            print(f"Error: {tenant['message']}")  # Error message if creation failed
+    except Exception as e:
+        print(f"Error creating tenant: {e}")
+
+@tenant_cli.command("list", help="Lists tenants in the database")
+@click.argument("format", default="string")
+def list_tenant_command(format):
+    try:
+        if format == 'string':
+            tenants = get_all_tenants()
+            if tenants:
+                for tenant in tenants:
+                    print(f"{tenant.username} ({tenant.email})")
+            else:
+                print("No tenants found.")
+        else:
+            tenants_json = get_all_tenants_json()
+            if tenants_json:
+                print(tenants_json)
+            else:
+                print("No tenants found.")
+    except Exception as e:
+        print(f"Error fetching tenants: {e}")
+
+app.cli.add_command(tenant_cli)  # Add tenant commands group to the app
 
 '''
 Apartment Commands
@@ -99,37 +151,6 @@ def list_apartment_command():
 
 app.cli.add_command(apartment_cli)  # Add the apartment commands group to the app
 
-
-'''
-Amenity Commands
-'''
-
-amenity_cli = AppGroup('amenity', help='Amenity object commands')  # Amenity commands group
-
-@amenity_cli.command("create", help="Creates an amenity")
-@click.argument("name", default="Swimming Pool")
-def create_amenity_command(name):
-    try:
-        amenity = create_amenity(name)
-        print(f"Amenity '{amenity.name}' created successfully!")
-    except Exception as e:
-        print(f"Error creating amenity: {e}")
-
-@amenity_cli.command("list", help="Lists amenities in the database")
-def list_amenity_command():
-    try:
-        amenities = get_all_amenities()
-        if amenities:
-            for amenity in amenities:
-                print(f"{amenity.name}")
-        else:
-            print("No amenities found.")
-    except Exception as e:
-        print(f"Error fetching amenities: {e}")
-
-app.cli.add_command(amenity_cli)  # Add the amenity commands group to the app
-
-
 '''
 Review Commands
 '''
@@ -137,17 +158,16 @@ Review Commands
 review_cli = AppGroup('review', help='Review object commands')  # Review commands group
 
 @review_cli.command("create", help="Creates a review for an apartment")
-@click.argument("user_id", type=int)
+@click.argument("tenant_id", type=int)  # Updated from user_id to tenant_id
 @click.argument("apartment_id", type=int)
 @click.argument("rating", type=int)
 @click.argument("comment")
-def create_review_command(user_id, apartment_id, rating, comment):
+def create_review_command(tenant_id, apartment_id, rating, comment):
     try:
-        response, status_code = create_review(user_id, apartment_id, rating, comment)
+        response, status_code = create_review(tenant_id, apartment_id, rating, comment)
         print(response['message'])
     except Exception as e:
         print(f"Error creating review: {e}")
-
 
 @review_cli.command("list", help="Lists reviews for an apartment")
 @click.argument("apartment_id", default=1)
@@ -164,21 +184,34 @@ def list_review_command(apartment_id):
 
 app.cli.add_command(review_cli)  # Add the review commands group to the app
 
-
 '''
 Test Commands
 '''
 
 test = AppGroup('test', help='Testing commands')
 
-@test.command("user", help="Run User tests")
+@test.command("landlord", help="Run Landlord tests")
 @click.argument("type", default="all")
-def user_tests_command(type):
+def landlord_tests_command(type):
     try:
         if type == "unit":
-            sys.exit(pytest.main(["-k", "UserUnitTests"]))
+            sys.exit(pytest.main(["-k", "LandlordUnitTests"]))
         elif type == "int":
-            sys.exit(pytest.main(["-k", "UserIntegrationTests"]))
+            sys.exit(pytest.main(["-k", "LandlordIntegrationTests"]))
+        else:
+            sys.exit(pytest.main(["-k", "App"]))
+    except Exception as e:
+        print(f"Error running tests: {e}")
+        sys.exit(1)
+
+@test.command("tenant", help="Run Tenant tests")
+@click.argument("type", default="all")
+def tenant_tests_command(type):
+    try:
+        if type == "unit":
+            sys.exit(pytest.main(["-k", "TenantUnitTests"]))
+        elif type == "int":
+            sys.exit(pytest.main(["-k", "TenantIntegrationTests"]))
         else:
             sys.exit(pytest.main(["-k", "App"]))
     except Exception as e:

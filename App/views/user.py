@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, send_from_directory, flash, redirect, url_for
+'''from flask import Blueprint, render_template, jsonify, request, send_from_directory, flash, redirect, url_for
 from flask_jwt_extended import jwt_required, current_user as jwt_current_user
 
 from.index import index_views
@@ -37,4 +37,5 @@ def create_user_endpoint():
 
 @user_views.route('/static/users', methods=['GET'])
 def static_user_page():
-  return send_from_directory('static', 'static-user.html')
+  return send_from_directory('static', 'static-user.html')'
+  '''
