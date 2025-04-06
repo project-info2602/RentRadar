@@ -1,5 +1,6 @@
 from werkzeug.security import check_password_hash, generate_password_hash
 from App.database import db
+from App.models.apartment import *
 
 class Tenant(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -11,6 +12,18 @@ class Tenant(db.Model):
     apartment = db.relationship('Apartment', back_populates='tenants')  # Define reverse relationship
 
     reviews = db.relationship('Review', back_populates='tenant', lazy=True, cascade="all, delete-orphan")
+
+    def __init__(self, username, email, password, lease_code):
+        self.username = username
+        self.email = email
+        self.set_password(password)
+    
+        apartment = Apartment.query.filter_by(lease_code=lease_code).first()
+        if not apartment:
+            raise ValueError("Invalid lease code: no apartment found.")
+    
+        self.apartment_id = apartment.id
+
 
     def set_password(self, password):
         """Set the tenant's password securely (hashed)."""

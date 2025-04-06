@@ -14,6 +14,12 @@ class Review(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Automatically set the current time when a review is created
 
+    def __init__(self, tenant_id, apartment_id, rating, comment):
+        self.tenant_id = tenant_id
+        self.apartment_id = apartment_id
+        self.rating = rating
+        self.comment = comment
+
     def get_json(self):
         """Convert the Review object to JSON format."""
         return {

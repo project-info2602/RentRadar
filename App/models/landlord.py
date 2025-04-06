@@ -10,6 +10,14 @@ class Landlord(db.Model):
     # Relationship: A landlord owns multiple apartments
     apartments_owned = db.relationship('Apartment', back_populates='landlord', cascade="all, delete-orphan")
 
+    def __init__(self, username, email, password):
+        self.username = username
+        self.email = email
+        self.set_password(password)
+
+    def __repr__(self):
+        return f'Landlord {self.username} - {self.email}'
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 

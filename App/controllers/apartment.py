@@ -30,7 +30,7 @@ def create_apartment(title, description, location, price, landlord_id, amenities
         amenities=amenities
     )
     
-    apartment.lease_code = generate_lease_code(apartment)
+    #apartment.lease_code = generate_lease_code(apartment)
     
     db.session.add(apartment)
     db.session.commit()

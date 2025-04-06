@@ -18,6 +18,20 @@ class Apartment(db.Model):
     tenants = db.relationship('Tenant', back_populates='apartment')
     reviews = db.relationship('Review', back_populates='apartment', lazy=True, cascade="all, delete-orphan")
 
+    def __init__(self, title, description, location, price, landlord_id, amenities=None):
+        self.title = title
+        self.description = description
+        self.location = self.validate_location(location)
+        self.price = price
+        self.landlord_id = landlord_id
+        self.lease_code = self.generate_lease_code(title, location, landlord_id)
+    
+        # Validate amenities before setting them
+        if amenities is None:
+            amenities = []
+        self.validate_amenities(amenities)
+        self.amenities = amenities
+
     def __repr__(self):
         return f"<Apartment {self.title} - {self.location}>"
     
@@ -45,7 +59,8 @@ class Apartment(db.Model):
         """Validate if the location is in the allowed locations list."""
         if location not in LOCATIONS:
             raise ValueError(f"Invalid location: {location}. Must be one of {LOCATIONS}.")
-
+        return location
+    
     @staticmethod
     def validate_amenities(amenities):
         """Validate if all amenities are in the allowed amenities list."""

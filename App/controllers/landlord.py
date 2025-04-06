@@ -3,8 +3,8 @@ from App.models import Landlord, Apartment
 
 def create_landlord(username, email, password):
     """Create a new landlord."""
-    landlord = Landlord(username=username, email=email)
-    landlord.set_password(password)
+    landlord = Landlord(username=username, email=email, password=password)
+    #landlord.set_password(password)
     db.session.add(landlord)
     db.session.commit()
     return landlord
