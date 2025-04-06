@@ -95,8 +95,8 @@ def initialize_sample_data_ALL():
         apartments = []
         for title, description, price in APARTMENTS_DATA:
             landlord = random.choice(landlords)  # Randomly assign landlord for each apartment
-            # Randomly select amenities (4 random amenities from AMENITIES list)
-            selected_amenities = random.sample(AMENITIES, 4)
+            # Randomly select amenities (10 random amenities from AMENITIES list)
+            selected_amenities = random.sample(AMENITIES, 10)
             # Randomly assign a location from LOCATIONS list
             location = random.choice(LOCATIONS)
 

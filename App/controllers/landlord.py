@@ -1,5 +1,6 @@
 from App.database import db
-from App.models import Landlord, Apartment
+from App.models import Landlord
+from App.controllers.apartment import create_apartment
 
 def create_landlord(username, email, password):
     """Create a new landlord."""
@@ -10,19 +11,8 @@ def create_landlord(username, email, password):
     return landlord
 
 def add_apartment(landlord_id, title, description, location, price, amenities):
-    """Allow landlords to add a new apartment."""
-    lease_code = Apartment.generate_lease_code(title, location, landlord_id)
-    apartment = Apartment(
-        title=title,
-        description=description,
-        location=location,
-        price=price,
-        landlord_id=landlord_id,
-        amenities=amenities,
-        lease_code=lease_code
-    )
-    db.session.add(apartment)
-    db.session.commit()
+    apartment = create_apartment(title, description, location, price, landlord_id, amenities)
+
     return apartment
 
 def get_landlord_apartments(landlord_id):

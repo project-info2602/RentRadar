@@ -24,7 +24,7 @@ class Review(db.Model):
         """Convert the Review object to JSON format."""
         return {
             "id": self.id,
-            "content": self.content,
+            "comment": self.comment,
             "rating": self.rating,
             "tenant_id": self.tenant_id,
             "apartment_id": self.apartment_id,

@@ -47,25 +47,28 @@ def get_apartment(id):
 
 # Update an apartment's amenities from the constant list
 # Update an apartment's amenities, ensuring amenities are in the constant list
-def update_apartment_amenities(id, amenities_list):
+def update_apartment(id, title=None, description=None, price=None, amenities_list=None):
     apartment = Apartment.query.get(id)
-    
-    if apartment:
-        # Filter amenities to ensure they are in the constant list
-        valid_amenities = [amenity for amenity in amenities_list if amenity in AMENITIES]
-        
-        # If no valid amenities were found, return a message
-        if not valid_amenities:
-            return {"message": "No valid amenities found in the provided list."}, 400
-        
-        # Update the apartment's amenities field
-        apartment.amenities = valid_amenities
-        
-        # Commit the changes
-        db.session.commit()
 
+    if apartment:
+        if title:
+            apartment.title = title
+        if description:
+            apartment.description = description
+        if price is not None:
+            apartment.price = price
+
+        if amenities_list is not None:
+            # Validate amenities against allowed list
+            valid_amenities = [a for a in amenities_list if a in AMENITIES]
+            if not valid_amenities:
+                return {"message": "No valid amenities found in the provided list."}, 400
+            apartment.amenities = valid_amenities
+
+        db.session.commit()
         return apartment
     return None
+
 
 # Delete an apartment
 def delete_apartment(id):
@@ -96,17 +99,33 @@ def verify_tenant(user_id, lease_code):
     return {"message": "Tenant verified successfully."}
 
 # Search apartments by location and amenities
+from sqlalchemy import func
+
 def search_apartments(filters):
     query = Apartment.query
-    
+
+    # Filter by location (in SQL)
     if filters.get('location') and filters['location'] in LOCATIONS:
         query = query.filter(Apartment.location == filters['location'])
-    
+
+    apartments = query.all()
+
+    # Filter by amenities (in Python)
     if filters.get('amenities'):
         selected_amenities = set(filters['amenities'])
-        query = query.filter(Apartment.amenities.contains(selected_amenities))
-    
-    return query.all()
+
+        def has_all_amenities(apartment):
+            return apartment.amenities and selected_amenities.issubset(set(apartment.amenities))
+
+        apartments = list(filter(has_all_amenities, apartments))
+
+    return apartments
+
+
+
+
+
+
 
 # Get all reviews for a specific apartment
 def get_reviews_for_apartment(apartment_id):
@@ -117,7 +136,7 @@ def get_reviews_for_apartment(apartment_id):
         return {"message": "No reviews found for this apartment"}, 404
     
     # Return reviews as a list of JSON objects
-    return [review.to_json() for review in reviews]
+    return [review.get_json() for review in reviews]
 
 # Get all tenants of a specific apartment
 def get_all_tenants_of_apartment(apartment_id):
