@@ -1,22 +1,36 @@
-from App.models import Apartment, User, Amenity, ApartmentAmenity
+from App.models import Apartment, Landlord, Tenant, Review
 from App.database import db
+from App.constants import AMENITIES, LOCATIONS
+import hashlib
+
+# Function to generate a unique lease code
+def generate_lease_code(apartment):
+    data = f"{apartment.id}{apartment.title}{apartment.location}{apartment.price}"
+    return hashlib.md5(data.encode()).hexdigest()[:8]
 
 # Create a new apartment (only landlords can create)
-def create_apartment(title, description, location, price, landlord_id):
-    landlord = User.query.get(landlord_id)
+def create_apartment(title, description, location, price, landlord_id, amenities):
+    landlord = Landlord.query.get(landlord_id)  # Changed to Landlord model
     if not landlord:
         return {"message": "Landlord not found."}, 404
-    
-    if landlord.role != 'landlord':
-        return {"message": "Only landlords can create apartments."}, 403
+
+    if location not in LOCATIONS:
+        return {"message": "Invalid location."}, 400
+
+    for amenity in amenities:
+        if amenity not in AMENITIES:
+            return {"message": f"Invalid amenity: {amenity}"}, 400
 
     apartment = Apartment(
         title=title,
         description=description,
         location=location,
         price=price,
-        landlord_id=landlord_id
+        landlord_id=landlord_id,
+        amenities=amenities
     )
+    
+    apartment.lease_code = generate_lease_code(apartment)
     
     db.session.add(apartment)
     db.session.commit()
@@ -31,25 +45,25 @@ def get_apartments():
 def get_apartment(id):
     return Apartment.query.get(id)
 
-# Update an apartment
-def update_apartment(id, data):
+# Update an apartment's amenities from the constant list
+# Update an apartment's amenities, ensuring amenities are in the constant list
+def update_apartment_amenities(id, amenities_list):
     apartment = Apartment.query.get(id)
+    
     if apartment:
-        apartment.location = data.get('location', apartment.location)
-        apartment.price = data.get('price', apartment.price)
-        apartment.description = data.get('description', apartment.description)
+        # Filter amenities to ensure they are in the constant list
+        valid_amenities = [amenity for amenity in amenities_list if amenity in AMENITIES]
         
-        # Update amenities (this assumes you are passing a list of amenity IDs to update)
-        if 'amenities' in data:
-            amenities_ids = data['amenities']
-            apartment.amenities.clear()  # Remove existing amenities
-            for amenity_id in amenities_ids:
-                amenity = Amenity.query.get(amenity_id)
-                if amenity:
-                    apartment_amenity = ApartmentAmenity(apartment_id=apartment.id, amenity_id=amenity.id)
-                    db.session.add(apartment_amenity)
+        # If no valid amenities were found, return a message
+        if not valid_amenities:
+            return {"message": "No valid amenities found in the provided list."}, 400
         
+        # Update the apartment's amenities field
+        apartment.amenities = valid_amenities
+        
+        # Commit the changes
         db.session.commit()
+
         return apartment
     return None
 
@@ -62,18 +76,61 @@ def delete_apartment(id):
         return True
     return False
 
-# Search apartments by filters (location, price, amenities)
+# Verify tenant by lease code
+def verify_tenant(user_id, lease_code):
+    tenant = Tenant.query.get(user_id)  # Changed to Tenant model
+    if not tenant:
+        return {"message": "Tenant not found."}, 404
+    
+    apartment = Apartment.query.filter_by(lease_code=lease_code).first()
+    if not apartment:
+        return {"message": "Invalid lease code."}, 400
+    
+    if tenant in apartment.tenants:
+        return {"message": "Tenant is already verified."}, 400
+    
+    # Create a new verified tenant (add tenant to apartment's tenant list)
+    apartment.tenants.append(tenant)
+    db.session.commit()
+
+    return {"message": "Tenant verified successfully."}
+
+# Search apartments by location and amenities
 def search_apartments(filters):
     query = Apartment.query
-    if filters.get('location'):
-        query = query.filter(Apartment.location.like(f"%{filters['location']}%"))
-    if filters.get('price'):
-        query = query.filter(Apartment.price <= filters['price'])
+    
+    if filters.get('location') and filters['location'] in LOCATIONS:
+        query = query.filter(Apartment.location == filters['location'])
     
     if filters.get('amenities'):
-        amenities = filters['amenities']
-        for amenity_id in amenities:
-            # Assume amenity_id is a list of amenity IDs to filter by
-            query = query.filter(Apartment.amenities.any(ApartmentAmenity.amenity_id == amenity_id))
+        selected_amenities = set(filters['amenities'])
+        query = query.filter(Apartment.amenities.contains(selected_amenities))
     
     return query.all()
+
+# Get all reviews for a specific apartment
+def get_reviews_for_apartment(apartment_id):
+    # Query the database to fetch all reviews for the apartment
+    reviews = Review.query.filter_by(apartment_id=apartment_id).all()
+    
+    if not reviews:
+        return {"message": "No reviews found for this apartment"}, 404
+    
+    # Return reviews as a list of JSON objects
+    return [review.to_json() for review in reviews]
+
+# Get all tenants of a specific apartment
+def get_all_tenants_of_apartment(apartment_id):
+    apartment = Apartment.query.get(apartment_id)
+
+    if not apartment:
+        return {"message": "Apartment not found"}, 404
+
+    # Get all tenants associated with this apartment via reviews (or however tenants are associated)
+    tenants = Tenant.query.join(Review).filter(Review.apartment_id == apartment_id).all()  # Changed to Tenant model
+
+    if not tenants:
+        return {"message": "No tenants found for this apartment"}, 404
+
+    # Return tenants as a list of JSON objects
+    return [tenant.get_json() for tenant in tenants]
