@@ -18,11 +18,13 @@ def add_apartment(landlord_id, title, description, location, price, amenities):
 def get_landlord_apartments(landlord_id):
     """Return a list of apartments owned by a landlord."""
     landlord = Landlord.query.get(landlord_id)
-    return [apt.get_json() for apt in landlord.apartments_owned] if landlord else None
+    if landlord:
+        return [apt.get_json() for apt in landlord.apartments_owned] if landlord else None
+    return []
 
 def get_all_landlords():
     return Landlord.query.all()
 
 def get_all_landlords_json():
     landlords = Landlord.query.all()
-    return [landlord.to_json() for landlord in landlords]  # Assuming `to_json` method exists on the `Landlord` model
+    return [landlord.get_json() for landlord in landlords]  # Assuming `to_json` method exists on the `Landlord` model

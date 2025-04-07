@@ -239,12 +239,6 @@ def apartment_reviews_command(apartment_id):
     except Exception as e:
         print(f"Error retrieving reviews: {e}")
 
-
-
-
-
-
-
 app.cli.add_command(apartment_cli)  # Add the apartment commands group to the app
 
 '''

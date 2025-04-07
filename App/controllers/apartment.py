@@ -98,9 +98,6 @@ def verify_tenant(user_id, lease_code):
 
     return {"message": "Tenant verified successfully."}
 
-# Search apartments by location and amenities
-from sqlalchemy import func
-
 def search_apartments(filters):
     query = Apartment.query
 
@@ -120,12 +117,6 @@ def search_apartments(filters):
         apartments = list(filter(has_all_amenities, apartments))
 
     return apartments
-
-
-
-
-
-
 
 # Get all reviews for a specific apartment
 def get_reviews_for_apartment(apartment_id):

@@ -2,20 +2,14 @@ from App.database import db
 from App.models import Tenant
 
 def create_tenant(username, email, password, lease_code):
-    """Create a new tenant if they provide a valid lease code."""
-    #apartment = Apartment.query.filter_by(lease_code=lease_code).first()
-    
-    #if not apartment:
-    #    return None  # Invalid lease code
-
-    tenant = Tenant(username=username, email=email, password=password, lease_code=lease_code)
-    #tenant.set_password(password)  # Securely hash the password
-    #tenant.apartment_id = apartment.id  # Link tenant to the apartment via foreign key
-
-    db.session.add(tenant)
-    db.session.commit()
-    
-    return tenant
+    try:
+        tenant = Tenant(username=username, email=email, password=password, lease_code=lease_code)
+        db.session.add(tenant)
+        db.session.commit()
+        return tenant
+    except ValueError as e:
+        print(f"[create_tenant] Error: {e}")
+        return None
 
 
 def get_tenant_reviews(tenant_id):
