@@ -32,7 +32,7 @@ class Tenant(db.Model):
         """Check the tenant's password."""
         return check_password_hash(self.password_hash, password)
 
-    def to_json(self):
+    def get_json(self):
         """Convert the Tenant object to JSON format."""
         return {
             "id": self.id,

@@ -13,14 +13,16 @@ from App.controllers import (
     get_all_landlords_json,
     create_tenant,
     get_tenant_reviews,
-    get_all_tenants_json,
     create_apartment, 
     update_apartment, 
     delete_apartment, 
-    verify_tenant, 
     search_apartments, 
     get_reviews_for_apartment, 
-    get_all_tenants_of_apartment
+    get_all_tenants_of_apartment,
+    create_review,
+    get_reviews,
+    update_review,
+    delete_review
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -152,7 +154,7 @@ class TenantUnitTests(unittest.TestCase):
 
         tenant = create_tenant("elena_ross", "elena_ross@example.com", "elenapass", apartment.lease_code)
         
-        tenant_json = tenant.to_json()
+        tenant_json = tenant.get_json()
         
         self.assertDictEqual(tenant_json, {
             'id': tenant.id,
@@ -187,29 +189,18 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
     """Test functions related to apartments"""
 
     def setUp(self):
-        """Set up the test environment."""
-        app = create_app('testing')
-        self.client = app.test_client()
-        self.app_context = app.app_context()
+        self.app = create_app()
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        self.app.config['TESTING'] = True
+        self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
 
-        # Create test landlord and tenant
-        self.landlord = Landlord(
-            username="landlord1",
-            email="landlord1@example.com",
-            password=generate_password_hash("password123")
-        )
-        db.session.add(self.landlord)
-        db.session.commit()
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
-        self.tenant = Tenant(
-            username="tenant1",
-            email="tenant1@example.com",
-            password=generate_password_hash("password123")
-        )
-        db.session.add(self.tenant)
-        db.session.commit()
 
     def tearDown(self):
         """Clean up after each test."""
@@ -218,27 +209,40 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
 
     def test_create_apartment(self):
         """Test apartment creation."""
-        apartment = create_apartment(
-            title="Test Apartment", 
-            description="Test Description", 
-            location=LOCATIONS[0],  # Use the first location from LOCATIONS
-            price=1000.0, 
-            landlord_id=self.landlord.id,
-            amenities=["WiFi", "Pool"]
+        landlord = create_landlord("greg", "greg@example.com", "gregpass")
+
+        result = create_apartment(
+            landlord_id=landlord.id,
+            title="Test Apartment",
+            description="Test Description",
+            location=LOCATIONS[0],
+            price=1000.0,
+            amenities= [AMENITIES[0], AMENITIES[2]]
         )
-        self.assertIsNotNone(apartment.id)
-        self.assertEqual(apartment.title, "Test Apartment")
-        self.assertEqual(apartment.location, LOCATIONS[0])  # Ensure correct location
+
+        if isinstance(result, tuple):
+            self.fail(f"Apartment creation failed with error: {result[0]}")
+
+        apartment = result
+
+        self.assertIsNotNone(apartment.id)  # Ensure the apartment has an ID
+        self.assertEqual(apartment.title, "Test Apartment")  # Check the apartment title
+        self.assertEqual(apartment.description, "Test Description")
+        self.assertEqual(apartment.location, LOCATIONS[0])  # Ensure the location is correct
+        self.assertEqual(apartment.price, 1000.0)
+        self.assertEqual(apartment.amenities, [AMENITIES[0], AMENITIES[2]])  # Verify amenities
 
     def test_update_apartment(self):
-    
+        
+        landlord = create_landlord("greg", "greg@example.com", "gregpass")
+
         apartment = create_apartment(
             title="Test Apartment", 
             description="Test Description", 
             location=LOCATIONS[0],  # Use the first location from LOCATIONS
             price=1000.0, 
-            landlord_id=self.landlord.id,
-            amenities=["WiFi"]
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0]]
         )
 
     # Updating the apartment amenities
@@ -247,25 +251,27 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
             title="Updated Test Apartment", 
             description="Updated Test Description", 
             price=1200.0, 
-            amenities=["Pool", "Gym"]
+            amenities_list=[AMENITIES[1], AMENITIES[2]]
         )
 
         # Check if the apartment is updated correctly
         self.assertEqual(updated_apartment.title, "Updated Test Apartment")
         self.assertEqual(updated_apartment.description, "Updated Test Description")
         self.assertEqual(updated_apartment.price, 1200.0)  # Verify updated price
-        self.assertEqual(updated_apartment.amenities, ["Pool", "Gym"])  # Verify amenities updated
+        self.assertEqual(updated_apartment.amenities, [AMENITIES[1], AMENITIES[2]])  # Verify amenities updated
 
 
     def test_delete_apartment(self):
         """Test deleting an apartment."""
+        landlord = create_landlord("greg", "greg@example.com", "gregpass")
+
         apartment = create_apartment(
             title="Test Apartment", 
             description="Test Description", 
             location=LOCATIONS[0],  # Use the first location from LOCATIONS
             price=1000.0, 
-            landlord_id=self.landlord.id,
-            amenities=["WiFi"]
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0], AMENITIES[2], AMENITIES[3]]
         )
         apartment_id = apartment.id
         delete_apartment(apartment_id)
@@ -274,19 +280,206 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
 
     def test_search_apartments(self):
         """Test searching for apartments."""
+        landlord = create_landlord("greg", "greg@example.com", "gregpass")
+
         apartment = create_apartment(
             title="Test Apartment", 
             description="Test Description", 
-            location="Test Location", 
+            location=LOCATIONS[0], 
             price=1000.0, 
-            landlord_id=self.landlord.id,
-            amenities=["WiFi"]
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0], AMENITIES[2], AMENITIES[3]]
         )
-        apartments = search_apartments(location="Test Location", amenities=["WiFi"])
+        apartments = search_apartments({
+            "location": LOCATIONS[0],
+            "amenities": [AMENITIES[0], AMENITIES[2], AMENITIES[3]]
+        })
+
         self.assertEqual(len(apartments), 1)  # Should return 1 apartment
         self.assertEqual(apartments[0].title, "Test Apartment")
 
+    def test_get_reviews_for_apartment(self):
+        # Set up landlord, tenant, and apartment
+        landlord = create_landlord("testlandlord", "landlord@test.com", "password")
+        
+        apartment = create_apartment(
+            title="Sample Apartment",
+            description="A test apartment",
+            location=LOCATIONS[0],
+            price=900.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0]]
+        )
 
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment.lease_code)
+        tenant2 = create_tenant("jimbo", "jimbo@test.com", "jimbopass", apartment.lease_code)
+        
+
+        # Add a review
+        review1 = create_review(tenant1.id, apartment.id, rating=4, comment="Nice place")
+        review2 = create_review(tenant2.id, apartment.id, rating=3, comment="Decent place")
+
+        result = get_reviews_for_apartment(apartment.id)
+
+        # Assert that the result is a list and contains both reviews
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)  # Should return 2 reviews
+        self.assertEqual(result[0]['comment'], "Nice place")  # Check first review comment
+        self.assertEqual(result[1]['comment'], "Decent place")  # Check second review comment
+
+    def test_get_all_tenants_of_apartment(self):
+        # Set up landlord, tenant, and apartment
+        landlord = create_landlord("testlandlord2", "landlord2@test.com", "password")
+    
+        apartment = create_apartment(
+            title="Another Apartment",
+            description="Another test apartment",
+            location=LOCATIONS[1],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+    
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment.lease_code)
+        tenant2 = create_tenant("jimbo", "jimbo@test.com", "jimbopass", apartment.lease_code)
+    
+        # Link tenants to apartment through reviews
+        review1 = create_review(tenant1.id, apartment.id, rating=4, comment="Nice place")
+        review2 = create_review(tenant2.id, apartment.id, rating=3, comment="Decent place")
+
+        # Call the function to get tenants for the apartment
+        result = get_all_tenants_of_apartment(apartment.id)
+
+        # Assert that the result is a list and contains both tenants
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)  # Should return 2 tenants
+        self.assertEqual(result[0]['username'], "testtenant")  # Check first tenant's username
+        self.assertEqual(result[1]['username'], "jimbo")  # Check second tenant's username
+
+class ReviewFunctionsTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        self.app.config['TESTING'] = True
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_create_review(self):
+        """Test creating a new review."""
+
+        landlord = create_landlord("testlandlord2", "landlord2@test.com", "password")
+    
+        apartment1 = create_apartment(
+            title="Another Apartment",
+            description="Another test apartment",
+            location=LOCATIONS[1],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+
+        apartment2 = create_apartment(
+            title="Another Apartment 1",
+            description="Another test apartment",
+            location=LOCATIONS[3],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment1.lease_code)
+
+        review = create_review(tenant1.id, apartment1.id, 5, "Great place!")
+        self.assertIsNotNone(review)
+        self.assertEqual(review.rating, 5)
+        self.assertEqual(review.comment, "Great place!")
+
+        # Test invalid review (tenant not verified for the apartment)
+        review_invalid = create_review(tenant1.id, apartment2.id, 4, "Nice place")
+        self.assertIsNone(review_invalid)
+
+    def test_get_reviews(self):
+        """Test fetching all reviews for an apartment."""
+
+        landlord = create_landlord("testlandlord2", "landlord2@test.com", "password")
+    
+        apartment = create_apartment(
+            title="Another Apartment",
+            description="Another test apartment",
+            location=LOCATIONS[1],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+    
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment.lease_code)
+        tenant2 = create_tenant("jimbo", "jimbo@test.com", "jimbopass", apartment.lease_code)
+
+        create_review(tenant1.id, apartment.id, 5, "Great place!")
+        create_review(tenant2.id, apartment.id, 4, "Nice place")
+
+        reviews = get_reviews(apartment.id)
+        self.assertEqual(len(reviews), 2)
+        self.assertEqual(reviews[0]['comment'], "Great place!")
+        self.assertEqual(reviews[1]['comment'], "Nice place")
+
+    def test_update_review(self):
+        """Test updating a review."""
+
+        landlord = create_landlord("testlandlord2", "landlord2@test.com", "password")
+    
+        apartment = create_apartment(
+            title="Another Apartment",
+            description="Another test apartment",
+            location=LOCATIONS[1],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+    
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment.lease_code)
+
+        review = create_review(tenant1.id, apartment.id, 4, "Good place")
+        updated_review = update_review(review.id, {'rating': 5, 'comment': "Great place!"})
+        
+        self.assertIsNotNone(updated_review)
+        self.assertEqual(updated_review.rating, 5)
+        self.assertEqual(updated_review.comment, "Great place!")
+
+        # Try updating a non-existent review
+        result = update_review(9999, {'rating': 5, 'comment': "Does not exist"})
+        self.assertIsNone(result)
+
+    def test_delete_review(self):
+        """Test deleting a review."""
+
+        landlord = create_landlord("testlandlord2", "landlord2@test.com", "password")
+    
+        apartment = create_apartment(
+            title="Another Apartment",
+            description="Another test apartment",
+            location=LOCATIONS[1],
+            price=950.0,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[1]]
+        )
+    
+        tenant1 = create_tenant("testtenant", "tenant@test.com", "password", apartment.lease_code)
+
+        review = create_review(tenant1.id, apartment.id, 4, "Good place")
+        result = delete_review(review.id)
+        self.assertTrue(result)
+
+        # Try deleting a non-existent review
+        result = delete_review(9999)
+        self.assertFalse(result)
 
 if __name__ == '__main__':
     unittest.main()
