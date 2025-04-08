@@ -17,7 +17,9 @@ from App.controllers import (
     get_apartments, 
     create_review, 
     get_reviews, 
-    initialize
+    initialize,
+    add_apartment, update_apartment, delete_apartment,
+    search_apartments, get_reviews_for_apartment
 )
 
 # Create app and migrate
@@ -125,17 +127,22 @@ Apartment Commands
 apartment_cli = AppGroup('apartment', help='Apartment object commands')  # Apartment commands group
 
 @apartment_cli.command("create", help="Creates an apartment")
-@click.argument("title", default="Cozy Studio")
-@click.argument("description", default="A cozy studio in the city center")
-@click.argument("location", default="New York")
-@click.argument("price", default=1500)
-@click.argument("landlord_id", default=1)
+@click.option("--title", default="Cozy Studio")
+@click.option("--description", default="A cozy studio in the city center")
+@click.option("--location", default="New York")
+@click.option("--price", type=float, default=1500)
+@click.option("--landlord_id", type=int, default=1)
 def create_apartment_command(title, description, location, price, landlord_id):
     try:
+        if location not in LOCATIONS:
+            print(f"Error: '{location}' is not a valid location. Choose from: {', '.join(LOCATIONS)}")
+            return
+
         apartment = create_apartment(title, description, location, price, landlord_id)
         print(f"Apartment '{apartment.title}' created successfully!")
     except Exception as e:
         print(f"Error creating apartment: {e}")
+
 
 @apartment_cli.command("list", help="Lists apartments in the database")
 def list_apartment_command():
@@ -148,6 +155,89 @@ def list_apartment_command():
             print("No apartments found.")
     except Exception as e:
         print(f"Error fetching apartments: {e}")
+
+@apartment_cli.command("update", help="Updates an apartment (except location)")
+@click.argument("apartment_id", type=int)
+@click.option("--title", default=None, help="New title")
+@click.option("--description", default=None, help="New description")
+@click.option("--price", type=float, default=None, help="New price")
+@click.option("--amenities", multiple=True, help="New amenities (must be valid)")
+def update_apartment_command(apartment_id, title, description, price, amenities):
+    try:
+        amenities_list = list(amenities) if amenities else None
+
+        # Validate amenities before calling the controller
+        if amenities_list:
+            invalid = [a for a in amenities_list if a not in AMENITIES]
+            if invalid:
+                print(f"Invalid amenities found: {', '.join(invalid)}")
+                print(f"Allowed amenities are: {', '.join(AMENITIES)}")
+                return
+
+        updated = update_apartment(apartment_id, title, description, price, amenities_list)
+        if updated:
+            print(f"Apt #{apartment_id} updated successfully.")
+        else:
+            print("Apartment not found.")
+    except Exception as e:
+        print(f"Error updating apartment: {e}")
+
+
+@apartment_cli.command("delete", help="Deletes an apartment")
+@click.argument("apartment_id", type=int)
+def delete_apartment_command(apartment_id):
+    try:
+        result = delete_apartment(apartment_id)
+        if result:
+            print(f"Apt #{apartment_id} deleted successfully.")
+        else:
+            print("Apartment not found.")
+    except Exception as e:
+        print(f"Error deleting apartment: {e}")
+
+@apartment_cli.command("search", help="Search apartments by location and amenities")
+@click.option("--location", default=None)
+@click.option("--amenities", multiple=True)
+def search_apartment_command(location, amenities):
+    try:
+        filters = {}
+
+        if location:
+            if location not in LOCATIONS:
+                print(f"Error: '{location}' is not a valid location. Choose from: {', '.join(LOCATIONS)}")
+                return
+            filters['location'] = location
+
+        if amenities:
+            invalid = [a for a in amenities if a not in AMENITIES]
+            if invalid:
+                print(f"Error: Invalid amenities: {', '.join(invalid)}. Allowed: {', '.join(AMENITIES)}")
+                return
+            filters['amenities'] = list(amenities)
+
+        results = search_apartments(filters)
+        if results:
+            for apt in results:
+                print(f"{apt.id}: {apt.title} - {apt.location} - ${apt.price} | Amenities: {', '.join(apt.amenities)}")
+        else:
+            print("No apartments found.")
+    except Exception as e:
+        print(f"Error searching apartments: {e}")
+
+
+@apartment_cli.command("reviews", help="List reviews for an apartment")
+@click.argument("apartment_id", type=int)
+def apartment_reviews_command(apartment_id):
+    try:
+        reviews = get_reviews_for_apartment(apartment_id)  # Assuming this returns a list of dictionaries
+        if reviews:
+            for review in reviews:
+                # Print the review information using the correct keys
+                print(f"Rating: {review.get('rating')} | Comment: {review.get('comment')} (Tenant #{review.get('tenant_id')})")
+        else:
+            print("No reviews found.")
+    except Exception as e:
+        print(f"Error retrieving reviews: {e}")
 
 app.cli.add_command(apartment_cli)  # Add the apartment commands group to the app
 
@@ -164,7 +254,7 @@ review_cli = AppGroup('review', help='Review object commands')  # Review command
 @click.argument("comment")
 def create_review_command(tenant_id, apartment_id, rating, comment):
     try:
-        response, status_code = create_review(tenant_id, apartment_id, rating, comment)
+        response = create_review(tenant_id, apartment_id, rating, comment)
         print(response['message'])
     except Exception as e:
         print(f"Error creating review: {e}")
@@ -199,9 +289,9 @@ def landlord_tests_command(type):
         elif type == "int":
             sys.exit(pytest.main(["-k", "LandlordIntegrationTests"]))
         else:
-            sys.exit(pytest.main(["-k", "App"]))
+            sys.exit(pytest.main(["-k", "Landlord"]))
     except Exception as e:
-        print(f"Error running tests: {e}")
+        print(f"Error running landlord tests: {e}")
         sys.exit(1)
 
 @test.command("tenant", help="Run Tenant tests")
@@ -213,9 +303,37 @@ def tenant_tests_command(type):
         elif type == "int":
             sys.exit(pytest.main(["-k", "TenantIntegrationTests"]))
         else:
-            sys.exit(pytest.main(["-k", "App"]))
+            sys.exit(pytest.main(["-k", "Tenant"]))
     except Exception as e:
-        print(f"Error running tests: {e}")
+        print(f"Error running tenant tests: {e}")
+        sys.exit(1)
+
+@test.command("apartment", help="Run Apartment tests")
+@click.argument("type", default="all")
+def apartment_tests_command(type):
+    try:
+        if type == "unit":
+            sys.exit(pytest.main(["-k", "ApartmentUnitTests"]))
+        elif type == "int":
+            sys.exit(pytest.main(["-k", "ApartmentIntegrationTests"]))
+        else:
+            sys.exit(pytest.main(["-k", "Apartment"]))
+    except Exception as e:
+        print(f"Error running apartment tests: {e}")
+        sys.exit(1)
+
+@test.command("review", help="Run Review tests")
+@click.argument("type", default="all")
+def review_tests_command(type):
+    try:
+        if type == "unit":
+            sys.exit(pytest.main(["-k", "ReviewUnitTests"]))
+        elif type == "int":
+            sys.exit(pytest.main(["-k", "ReviewIntegrationTests"]))
+        else:
+            sys.exit(pytest.main(["-k", "Review"]))
+    except Exception as e:
+        print(f"Error running review tests: {e}")
         sys.exit(1)
 
 @app.cli.command("test", help="Run all tests")
@@ -226,4 +344,4 @@ def run_tests():
         print(f"Error running tests: {e}")
         sys.exit(1)
 
-app.cli.add_command(test)  # Add the test commands group to the app
+app.cli.add_command(test)

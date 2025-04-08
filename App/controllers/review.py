@@ -31,7 +31,7 @@ def create_review(tenant_id, apartment_id, rating, comment):
 # Get all reviews for an apartment
 def get_reviews(apartment_id):
     reviews = Review.query.filter_by(apartment_id=apartment_id).all()
-    return [review.to_json() for review in reviews]  # Ensure Review model has a to_json method
+    return [review.get_json() for review in reviews]  # Ensure Review model has a to_json method
 
 # Update a review
 def update_review(id, data):

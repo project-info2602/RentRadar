@@ -1,21 +1,19 @@
 from App.database import db
-from App.models import Tenant, Apartment
+from App.models import Tenant
+from App.models import Apartment
+from werkzeug.security import check_password_hash, generate_password_hash
+
 
 def create_tenant(username, email, password, lease_code):
-    """Create a new tenant if they provide a valid lease code."""
     apartment = Apartment.query.filter_by(lease_code=lease_code).first()
-    
     if not apartment:
-        return None  # Invalid lease code
-
-    tenant = Tenant(username=username, email=email)
-    tenant.set_password(password)  # Securely hash the password
-    tenant.apartment_id = apartment.id  # Link tenant to the apartment via foreign key
-
+        raise ValueError("Invalid lease code: no apartment found.")
+    
+    tenant = Tenant(username=username, email=email, password=password, lease_code=apartment.lease_code)
     db.session.add(tenant)
     db.session.commit()
-    
     return tenant
+
 
 
 def get_tenant_reviews(tenant_id):
@@ -28,4 +26,4 @@ def get_all_tenants():
 
 def get_all_tenants_json():
     tenants = Tenant.query.all()
-    return [tenant.to_json() for tenant in tenants]  # Assuming `to_json` method exists on the `Tenant` model
+    return [tenant.get_json() for tenant in tenants]  # Assuming `to_json` method exists on the `Tenant` model
