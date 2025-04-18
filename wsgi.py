@@ -18,8 +18,10 @@ from App.controllers import (
     create_review, 
     get_reviews, 
     initialize,
-    add_apartment, update_apartment, delete_apartment,
-    search_apartments, get_reviews_for_apartment
+    update_apartment,
+    delete_apartment,
+    search_apartments,
+    get_reviews_for_apartment
 )
 
 # Create app and migrate
@@ -129,7 +131,7 @@ apartment_cli = AppGroup('apartment', help='Apartment object commands')  # Apart
 @apartment_cli.command("create", help="Creates an apartment")
 @click.option("--title", default="Cozy Studio")
 @click.option("--description", default="A cozy studio in the city center")
-@click.option("--location", default="New York")
+@click.option("--location", default=LOCATIONS[0])
 @click.option("--price", type=float, default=1500)
 @click.option("--landlord_id", type=int, default=1)
 def create_apartment_command(title, description, location, price, landlord_id):
@@ -150,7 +152,9 @@ def list_apartment_command():
         apartments = get_apartments()
         if apartments:
             for apartment in apartments:
-                print(f"{apartment.title} - {apartment.location} - ${apartment.price}")
+                #print(f"{apartment.title} - {apartment.location} - ${apartment.price} - {apartment.lease_code}")
+                #print(f"{apartment.title} | {apartment.description} | {apartment.location} | ${apartment.price} | Landlord: {apartment.landlord.username} | Amenities: {', '.join(apartment.amenities)} | Lease Code: {apartment.lease_code}")
+                print(f"{apartment.title} | {apartment.location} | ${apartment.price} | Landlord: {apartment.landlord.username} | Amenities: {', '.join(apartment.amenities)} | Lease Code: {apartment.lease_code}")
         else:
             print("No apartments found.")
     except Exception as e:
@@ -166,7 +170,6 @@ def update_apartment_command(apartment_id, title, description, price, amenities)
     try:
         amenities_list = list(amenities) if amenities else None
 
-        # Validate amenities before calling the controller
         if amenities_list:
             invalid = [a for a in amenities_list if a not in AMENITIES]
             if invalid:
@@ -239,16 +242,16 @@ def apartment_reviews_command(apartment_id):
     except Exception as e:
         print(f"Error retrieving reviews: {e}")
 
-app.cli.add_command(apartment_cli)  # Add the apartment commands group to the app
+app.cli.add_command(apartment_cli)
 
 '''
 Review Commands
 '''
 
-review_cli = AppGroup('review', help='Review object commands')  # Review commands group
+review_cli = AppGroup('review', help='Review object commands')
 
 @review_cli.command("create", help="Creates a review for an apartment")
-@click.argument("tenant_id", type=int)  # Updated from user_id to tenant_id
+@click.argument("tenant_id", type=int)
 @click.argument("apartment_id", type=int)
 @click.argument("rating", type=int)
 @click.argument("comment")
@@ -266,13 +269,15 @@ def list_review_command(apartment_id):
         reviews = get_reviews(apartment_id)
         if reviews:
             for review in reviews:
-                print(f"Rating: {review.rating}, Comment: {review.comment}")
+                print(f"Rating: {review.get('rating')}, Comment: {review.get('comment')}")
+                #print(f"Rating: {review.get('rating')}, Comment: {review.get('comment')}, Tenant: {review.get('tenant').get('username')}, Apartment: {review.get('apartment').get('title')}, Date: {review.get('created_at')}")
+
         else:
             print("No reviews found.")
     except Exception as e:
         print(f"Error fetching reviews: {e}")
 
-app.cli.add_command(review_cli)  # Add the review commands group to the app
+app.cli.add_command(review_cli)
 
 '''
 Test Commands
