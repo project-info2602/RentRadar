@@ -142,10 +142,9 @@ class TenantUnitTests(unittest.TestCase):
         self.assertTrue(check_password_hash(tenant.password_hash, "johnpass"))
 
     def test_create_tenant_invalid_lease_code(self):
-        """Test that creating a tenant with an invalid lease code raises an error."""
-        with self.assertRaises(ValueError) as context:
-            create_tenant("jane_doe", "jane_doe@example.com", "janepass", "invalid_code")
-        self.assertEqual(str(context.exception), "Invalid lease code: no apartment found.")
+        """Test that creating a tenant with an invalid lease code returns None."""
+        tenant = create_tenant("jane_doe", "jane_doe@example.com", "janepass", "invalid_code")
+        self.assertIsNone(tenant)
 
     def test_get_tenant_json(self):
         """Test the JSON representation of a tenant."""

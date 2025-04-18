@@ -152,7 +152,9 @@ def list_apartment_command():
         apartments = get_apartments()
         if apartments:
             for apartment in apartments:
-                print(f"{apartment.title} - {apartment.location} - ${apartment.price}")
+                #print(f"{apartment.title} - {apartment.location} - ${apartment.price} - {apartment.lease_code}")
+                #print(f"{apartment.title} | {apartment.description} | {apartment.location} | ${apartment.price} | Landlord: {apartment.landlord.username} | Amenities: {', '.join(apartment.amenities)} | Lease Code: {apartment.lease_code}")
+                print(f"{apartment.title} | {apartment.location} | ${apartment.price} | Landlord: {apartment.landlord.username} | Amenities: {', '.join(apartment.amenities)} | Lease Code: {apartment.lease_code}")
         else:
             print("No apartments found.")
     except Exception as e:
@@ -267,7 +269,9 @@ def list_review_command(apartment_id):
         reviews = get_reviews(apartment_id)
         if reviews:
             for review in reviews:
-                print(f"Rating: {review.rating}, Comment: {review.comment}")
+                print(f"Rating: {review.get('rating')}, Comment: {review.get('comment')}")
+                #print(f"Rating: {review.get('rating')}, Comment: {review.get('comment')}, Tenant: {review.get('tenant').get('username')}, Apartment: {review.get('apartment').get('title')}, Date: {review.get('created_at')}")
+
         else:
             print("No reviews found.")
     except Exception as e:
