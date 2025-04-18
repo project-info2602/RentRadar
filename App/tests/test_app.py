@@ -19,6 +19,8 @@ from App.controllers import (
     search_apartments, 
     get_reviews_for_apartment, 
     get_all_tenants_of_apartment,
+    get_apartment_via_leasecode,    #just added to test
+    is_tenant_verified,                  #just added to test
     create_review,
     get_reviews,
     update_review,
@@ -201,7 +203,6 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-
     def tearDown(self):
         """Clean up after each test."""
         db.session.remove()
@@ -355,6 +356,93 @@ class ApartmentFunctionsTestCase(unittest.TestCase):
         self.assertEqual(len(result), 2)  # Should return 2 tenants
         self.assertEqual(result[0]['username'], "testtenant")  # Check first tenant's username
         self.assertEqual(result[1]['username'], "jimbo")  # Check second tenant's username
+
+    def test_get_apartment_via_leasecode(self):
+    
+        landlord = Landlord(username="testlandlord", email="landlord@example.com", password="password")
+        db.session.add(landlord)
+        db.session.commit()
+
+        apt = create_apartment(
+            title="Test Apt",
+            description="Nice place",
+            location=LOCATIONS[0],
+            price=1500,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0], AMENITIES[1]]
+        )
+
+        db.session.refresh(apt)
+
+        fetched = get_apartment_via_leasecode(apt.lease_code)
+
+        assert fetched is not None
+        assert isinstance(fetched, Apartment)
+        assert fetched.id == apt.id
+        assert fetched.lease_code == apt.lease_code
+
+    def test_verify_tenant_success(self):
+
+        landlord = create_landlord("landy", "landy@example.com", "securepass")
+
+        apartment = create_apartment(
+            title="Hilltop Retreat",
+            description="Nice view, quiet area",
+            location=LOCATIONS[0],
+            price=1200,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0], AMENITIES[1]]
+        )
+
+        tenant = create_tenant(
+            username="tomtenant",
+            email="tom@example.com",
+            password="secure123",
+            lease_code=apartment.lease_code
+        )
+
+        result = is_tenant_verified(tenant.id, apartment.lease_code)
+
+        refreshed_apartment = Apartment.query.get(apartment.id)  # Refresh to reflect new relationships
+
+        self.assertTrue(result)
+        self.assertIn(tenant, refreshed_apartment.tenants)
+
+    def test_verify_tenant_fail(self):
+        landlord = create_landlord("landyfail", "landyfail@example.com", "securepass")
+
+        apartment1 = create_apartment(
+            title="Ocean View",
+            description="Breezy and calm",
+            location=LOCATIONS[0],
+            price=1500,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0]]
+        )
+
+        apartment2 = create_apartment(
+            title="Mountain View",
+            description="Breezy and calm",
+            location=LOCATIONS[0],
+            price=1500,
+            landlord_id=landlord.id,
+            amenities=[AMENITIES[0]]
+        )
+
+        tenant = create_tenant(
+            username="failtenant",
+            email="fail@example.com",
+            password="secure123",
+            lease_code=apartment1.lease_code
+        )
+
+        result = is_tenant_verified(tenant.id, apartment2.lease_code)
+
+        refreshed_apartment = Apartment.query.get(apartment2.id)  # Refresh apartment2 state
+
+        self.assertFalse(result)
+        self.assertNotIn(tenant, refreshed_apartment.tenants)
+
 
 class ReviewFunctionsTestCase(unittest.TestCase):
     

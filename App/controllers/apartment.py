@@ -30,10 +30,12 @@ def create_apartment(title, description, location, price, landlord_id, amenities
         amenities=amenities
     )
     
-    #apartment.lease_code = generate_lease_code(apartment)
-    
     db.session.add(apartment)
     db.session.commit()
+
+    # Now generate and save lease code
+    apartment.lease_code = generate_lease_code(apartment) #just added to test
+    db.session.commit()                                   #just added to test
 
     return apartment
 
@@ -79,24 +81,16 @@ def delete_apartment(id):
         return True
     return False
 
-# Verify tenant by lease code
-def verify_tenant(user_id, lease_code):
-    tenant = Tenant.query.get(user_id)  # Changed to Tenant model
+def is_tenant_verified(tenant_id, lease_code):
+    tenant = Tenant.query.get(tenant_id)
     if not tenant:
-        return {"message": "Tenant not found."}, 404
-    
+        return False
+
     apartment = Apartment.query.filter_by(lease_code=lease_code).first()
     if not apartment:
-        return {"message": "Invalid lease code."}, 400
-    
-    if tenant in apartment.tenants:
-        return {"message": "Tenant is already verified."}, 400
-    
-    # Create a new verified tenant (add tenant to apartment's tenant list)
-    apartment.tenants.append(tenant)
-    db.session.commit()
+        return False
 
-    return {"message": "Tenant verified successfully."}
+    return tenant in apartment.tenants and apartment.id == tenant.apartment_id
 
 def search_apartments(filters):
     query = Apartment.query
@@ -144,3 +138,9 @@ def get_all_tenants_of_apartment(apartment_id):
 
     # Return tenants as a list of JSON objects
     return [tenant.get_json() for tenant in tenants]
+
+def get_apartment_via_leasecode(leasecode):
+    apartment = Apartment.query.filter_by(lease_code=leasecode).first()
+    if not apartment:
+        return {"message": "Apartment with this lease code not found."}, 404
+    return apartment

@@ -14,8 +14,6 @@ def create_tenant(username, email, password, lease_code):
     db.session.commit()
     return tenant
 
-
-
 def get_tenant_reviews(tenant_id):
     """Return all reviews written by a tenant."""
     tenant = Tenant.query.get(tenant_id)
@@ -26,4 +24,4 @@ def get_all_tenants():
 
 def get_all_tenants_json():
     tenants = Tenant.query.all()
-    return [tenant.get_json() for tenant in tenants]  # Assuming `to_json` method exists on the `Tenant` model
+    return [tenant.get_json() for tenant in tenants]
