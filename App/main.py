@@ -74,3 +74,63 @@ def create_app():
                 return redirect(url_for('login'))
         
         return render_template('login.html')
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        if request.method == 'POST':
+            try:
+                username = request.form.get('username')
+                email = request.form.get('email')
+                password = request.form.get('password')
+                confirm_password = request.form.get('confirm_password')
+                role = request.form.get('role')
+                lease_code = request.form.get('lease_code', '')
+
+                if not all([username, email, password, confirm_password, role]):
+                    flash('All fields are required', 'danger')
+                    return redirect(url_for('register'))
+
+                if password != confirm_password:
+                    flash('Passwords do not match', 'danger')
+                    return redirect(url_for('register'))
+
+                if role == 'landlord':
+                    if Landlord.query.filter((Landlord.username == username) | (Landlord.email == email)).first():
+                        flash('Username or email already exists', 'danger')
+                        return redirect(url_for('register'))
+
+                    landlord = Landlord(username=username, email=email, password=password)
+                    db.session.add(landlord)
+                    db.session.commit()
+                    flash('Landlord account created successfully! Please login.', 'success')
+                    return redirect(url_for('login'))
+
+                elif role == 'tenant':
+                    apartment = Apartment.query.filter_by(lease_code=lease_code).first()
+                    if not apartment:
+                        flash('Invalid lease code', 'danger')
+                        return redirect(url_for('register'))
+
+                    if Tenant.query.filter((Tenant.username == username) | (Tenant.email == email)).first():
+                        flash('Username or email already exists', 'danger')
+                        return redirect(url_for('register'))
+
+                    tenant = Tenant(
+                        username=username,
+                        email=email,
+                        password=password,
+                        lease_code=lease_code
+                    )
+                    db.session.add(tenant)
+                    db.session.commit()
+                    flash('Tenant account created successfully! Please login.', 'success')
+                    return redirect(url_for('login'))
+
+                else:
+                    flash('Invalid role selected', 'danger')
+                    
+            except Exception as e:
+                flash(f'Registration error: {str(e)}', 'danger')
+                return redirect(url_for('register'))
+        
+        return render_template('register.html')
+       
