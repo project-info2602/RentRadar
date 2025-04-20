@@ -133,4 +133,28 @@ def create_app():
                 return redirect(url_for('register'))
         
         return render_template('register.html')
+
+    @app.route('/register/check_lease', methods=['POST'])
+    def check_lease_code():
+        lease_code = request.json.get('lease_code')
+        apartment = Apartment.query.filter_by(lease_code=lease_code).first()
+        
+        if apartment:
+            return jsonify({
+                'valid': True,
+                'apartment': {
+                    'title': apartment.title,
+                    'location': apartment.location,
+                    'price': apartment.price
+                }
+            })
+        return jsonify({'valid': False})
+
+    @app.route('/logout')
+    def logout():
+        response = make_response(redirect(url_for('index')))
+        unset_jwt_cookies(response)
+        flash('You have been logged out', 'success')
+        return response
+
        
