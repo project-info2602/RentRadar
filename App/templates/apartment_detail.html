@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ apartment.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>{{ apartment.title }}</h2>
+                <p class="text-muted">
+                    <i class="bi bi-geo-alt"></i> {{ apartment.location }}
+                    <span class="float-end">${{ "%.2f"|format(apartment.price) }}/month</span>
+                </p>
+                <p>{{ apartment.description }}</p>
+                
+                {% if current_user and current_user.role == 'landlord' and current_user.id == apartment.landlord_id %}
+                    <div class="alert alert-info">
+                        <strong>Lease Code:</strong> {{ apartment.lease_code }}
+                        <small class="d-block mt-1">Share this code with tenants for registration</small>
+                    </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <h5>Amenities</h5>
+                    <ul class="amenities-list">
+                        {% for amenity in apartment.amenities %}
+                            <li>{{ amenity }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                {% if current_user and current_user.role == 'landlord' and current_user.id == apartment.landlord_id %}
+                    <div class="btn-group">
+                        <a href="{{ url_for('edit_apartment', apartment_id=apartment.id) }}" class="btn btn-secondary">
+                            Edit Apartment
+                        </a>
+                        <form action="{{ url_for('delete_apartment', apartment_id=apartment.id) }}" method="POST" class="ms-2">
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?')">
+                                Delete Apartment
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h4>Reviews</h4>
+            </div>
+            <div class="card-body">
+                {% if reviews %}
+                    {% for review in reviews %}
+                        <div class="review-card p-3 mb-3">
+                            <div class="d-flex justify-content-between">
+                                <h5>{{ review.tenant.username }}</h5>
+                                <div class="star-rating">
+                                    {% for i in range(review.rating) %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - review.rating) %}
+                                        <i class="bi bi-star"></i>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <p>{{ review.comment }}</p>
+                            <small class="text-muted">
+                                {{ review.created_at.strftime('%B %d, %Y') }}
+                                {% if current_user and current_user.role == 'tenant' and current_user.id == review.tenant_id %}
+                                    <span class="float-end">
+                                        <a href="{{ url_for('edit_review', review_id=review.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                        <form action="{{ url_for('delete_review', review_id=review.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this review?')">Delete</button>
+                                        </form>
+                                    </span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No reviews yet.</p>
+                {% endif %}
+                
+                {% if can_review and not has_reviewed %}
+                    <a href="{{ url_for('add_review', apartment_id=apartment.id) }}" class="btn btn-success mt-3">
+                        Add Your Review
+                    </a>
+                {% elif can_review and has_reviewed %}
+                    <div class="alert alert-info mt-3">
+                        You have already reviewed this apartment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Landlord Information</h5>
+                <p class="card-text">
+                    <strong>Name:</strong> {{ apartment.landlord.username }}<br>
+                    <strong>Email:</strong> {{ apartment.landlord.email }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Current Tenants</h5>
+                {% if tenants %}
+                    <ul class="list-group">
+                        {% for tenant in tenants %}
+                            <li class="list-group-item">
+                                {{ tenant.username }} ({{ tenant.email }})
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No current tenants.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
