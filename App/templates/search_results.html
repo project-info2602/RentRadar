@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<h2>Search Results</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Search Criteria</h5>
+        <ul>
+            {% if search_params.location %}
+                <li>Location: {{ search_params.location }}</li>
+            {% endif %}
+            {% if search_params.amenities %}
+                <li>Amenities: {{ search_params.amenities|join(", ") }}</li>
+            {% endif %}
+            {% if search_params.min_price %}
+                <li>Minimum Price: ${{ "%.2f"|format(search_params.min_price) }}</li>
+            {% endif %}
+            {% if search_params.max_price %}
+                <li>Maximum Price: ${{ "%.2f"|format(search_params.max_price) }}</li>
+            {% endif %}
+        </ul>
+        <a href="{{ url_for('search') }}" class="btn btn-sm btn-outline-primary">Modify Search</a>
+    </div>
+</div>
+
+{% if apartments %}
+    <div class="row">
+        {% for apartment in apartments %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ apartment.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ apartment.location }}</h6>
+                    <p class="card-text">{{ apartment.description[:100] }}...</p>
+                    <p class="card-text"><strong>${{ "%.2f"|format(apartment.price) }}</strong> per month</p>
+                    <a href="{{ url_for('apartment_detail', apartment_id=apartment.id) }}" class="btn btn-primary btn-sm">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No apartments found matching your search criteria.
+    </div>
+{% endif %}
+{% endblock %}
