@@ -409,4 +409,37 @@ def create_app():
             db.session.rollback()
             flash(f'Error deleting review: {str(e)}', 'danger')
             return redirect(url_for('apartment_detail', apartment_id=review.apartment_id))
+        
+    # Search
+    @app.route('/search', methods=['GET'])
+    def search():
+        location = request.args.get('location')
+        amenities = request.args.getlist('amenities')
+        min_price = request.args.get('min_price', type=float)
+        max_price = request.args.get('max_price', type=float)
+        
+        query = Apartment.query
+        
+        if location and location in LOCATIONS:
+            query = query.filter_by(location=location)
+        
+        apartments = query.all()
+        
+        if amenities:
+            apartments = [apt for apt in apartments 
+                         if all(amenity in apt.amenities for amenity in amenities)]
+        
+        if min_price is not None:
+            apartments = [apt for apt in apartments if apt.price >= min_price]
+        
+        if max_price is not None:
+            apartments = [apt for apt in apartments if apt.price <= max_price]
+        
+        return render_template('search_results.html', 
+                            apartments=apartments, 
+                            search_params=request.args,
+                            locations=LOCATIONS,
+                            amenities=AMENITIES)
+
+    return app
        
