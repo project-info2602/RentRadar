@@ -288,5 +288,25 @@ def create_app():
         return render_template('edit_apartment.html', 
                             apartment=apartment,
                             locations=LOCATIONS,
-                            amenities=AMENITIES)        
+                            amenities=AMENITIES)       
+
+    @app.route('/apartments/<int:apartment_id>/delete', methods=['POST'])
+    @jwt_required()
+    def delete_apartment(apartment_id):
+        current_user = get_jwt_identity()
+        apartment = Apartment.query.get_or_404(apartment_id)
+        
+        if current_user.get('role') != 'landlord' or current_user.get('id') != apartment.landlord_id:
+            flash('You cannot delete this apartment', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        try:
+            db.session.delete(apartment)
+            db.session.commit()
+            flash('Apartment deleted successfully', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error deleting apartment: {str(e)}', 'danger')
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id)) 
        
