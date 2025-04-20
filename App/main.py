@@ -251,5 +251,42 @@ def create_app():
                 flash(f'Error creating apartment: {str(e)}', 'danger')
                 return redirect(url_for('create_apartment'))
         
-        return render_template('create_apartment.html', locations=LOCATIONS, amenities=AMENITIES)    
+        return render_template('create_apartment.html', locations=LOCATIONS, amenities=AMENITIES)
+
+    @app.route('/apartments/<int:apartment_id>/edit', methods=['GET', 'POST'])
+    @jwt_required()
+    def edit_apartment(apartment_id):
+        current_user = get_jwt_identity()
+        apartment = Apartment.query.get_or_404(apartment_id)
+        
+        if current_user.get('role') != 'landlord' or current_user.get('id') != apartment.landlord_id:
+            flash('You can only edit your own apartments', 'danger')
+            return redirect(url_for('dashboard'))
+
+        if request.method == 'POST':
+            try:
+                apartment.title = request.form.get('title')
+                apartment.description = request.form.get('description')
+                apartment.location = request.form.get('location')
+                apartment.price = float(request.form.get('price'))
+                apartment.amenities = request.form.getlist('amenities')
+                
+                apartment.validate()
+                db.session.commit()
+                flash('Apartment updated successfully!', 'success')
+                return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+            
+            except ValueError as e:
+                db.session.rollback()
+                flash(f'Validation error: {str(e)}', 'danger')
+                return redirect(url_for('edit_apartment', apartment_id=apartment_id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating apartment: {str(e)}', 'danger')
+                return redirect(url_for('edit_apartment', apartment_id=apartment_id))
+        
+        return render_template('edit_apartment.html', 
+                            apartment=apartment,
+                            locations=LOCATIONS,
+                            amenities=AMENITIES)        
        
