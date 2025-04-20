@@ -354,4 +354,38 @@ def create_app():
                 return redirect(url_for('add_review', apartment_id=apartment_id))
         
         return render_template('add_review.html', apartment=apartment) 
+    
+    @app.route('/reviews/<int:review_id>/edit', methods=['GET', 'POST'])
+    @jwt_required()
+    def edit_review(review_id):
+        current_user = get_jwt_identity()
+        review = Review.query.get_or_404(review_id)
+        
+        if current_user.get('role') != 'tenant' or current_user.get('id') != review.tenant_id:
+            flash('You can only edit your own reviews', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        if request.method == 'POST':
+            try:
+                # Validate rating is between 1-5
+                rating = int(request.form.get('rating'))
+                if rating < 1 or rating > 5:
+                    raise ValueError("Rating must be between 1 and 5")
+                
+                review.rating = rating
+                review.comment = request.form.get('comment')
+                db.session.commit()
+                
+                flash('Review updated successfully!', 'success')
+                return redirect(url_for('apartment_detail', apartment_id=review.apartment_id))
+            except ValueError as e:
+                db.session.rollback()
+                flash(str(e), 'danger')
+                return redirect(url_for('edit_review', review_id=review_id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating review: {str(e)}', 'danger')
+                return redirect(url_for('edit_review', review_id=review_id))
+        
+        return render_template('edit_review.html', review=review)
        
