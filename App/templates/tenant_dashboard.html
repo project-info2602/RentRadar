@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Tenant Dashboard{% endblock %}
+
+{% block content %}
+<h2>Your Apartment</h2>
+
+{% if apartment %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{ apartment.title }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">{{ apartment.location }}</h6>
+            <p class="card-text">{{ apartment.description }}</p>
+            
+            <div class="mb-3">
+                <h6>Amenities:</h6>
+                <ul class="amenities-list">
+                    {% for amenity in apartment.amenities %}
+                        <li>{{ amenity }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <p class="card-text"><strong>${{ "%.2f"|format(apartment.price) }}</strong> per month</p>
+            
+            <a href="{{ url_for('apartment_detail', apartment_id=apartment.id) }}" class="btn btn-primary">
+                View Apartment
+            </a>
+            
+            {% if not has_reviewed %}
+                <a href="{{ url_for('add_review', apartment_id=apartment.id) }}" class="btn btn-success">
+                    Add Review
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <h3>Your Reviews</h3>
+    {% if user.reviews %}
+        {% for review in user.reviews %}
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="star-rating">
+                        {% for i in range(review.rating) %}
+                            <i class="bi bi-star-fill"></i>
+                        {% endfor %}
+                        {% for i in range(5 - review.rating) %}
+                            <i class="bi bi-star"></i>
+                        {% endfor %}
+                    </div>
+                    <p class="card-text">{{ review.comment }}</p>
+                    <small class="text-muted">Posted on {{ review.created_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>You haven't written any reviews yet.</p>
+    {% endif %}
+{% else %}
+    <div class="alert alert-warning">
+        You don't have an apartment assigned yet.
+    </div>
+{% endif %}
+{% endblock %}
