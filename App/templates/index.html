@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light p-5 rounded-lg m-3">
+    <h1 class="display-4">Welcome to Apartment Rental</h1>
+    <p class="lead">Find your perfect home with our wide selection of apartments.</p>
+    <hr class="my-4">
+    <p>Browse our listings or login to manage your properties or reviews.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('apartments_list') }}" role="button">Browse Apartments</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-house"></i> For Landlords</h5>
+                <p class="card-text">Manage your properties and connect with potential tenants.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-people"></i> For Tenants</h5>
+                <p class="card-text">Find your dream apartment and leave reviews.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-search"></i> Advanced Search</h5>
+                <p class="card-text">Filter by location, amenities, and price range.</p>
+                <a href="{{ url_for('search') }}" class="btn btn-sm btn-outline-primary">Search Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
