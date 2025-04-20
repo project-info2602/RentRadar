@@ -1,40 +1,30 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, set_access_cookies, unset_jwt_cookies
+from App.models import Landlord, Tenant, Apartment, Review
+from App.database import db
+from App.constants import AMENITIES, LOCATIONS
 import os
-from flask import Flask, render_template
-from flask_uploads import DOCUMENTS, IMAGES, TEXT, UploadSet, configure_uploads
-from flask_cors import CORS
-from werkzeug.utils import secure_filename
-from werkzeug.datastructures import  FileStorage
+import secrets
+import string
+from werkzeug.security import generate_password_hash, check_password_hash
 
+def create_app():
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.root_path, 'data.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-jwt-key')
+    app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+    app.config['JWT_COOKIE_NAME'] = 'access_token'
+    app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+    app.config['JWT_COOKIE_SECURE'] = False
+    app.config['JWT_COOKIE_SAMESITE'] = 'Lax'
 
-from App.database import init_db
-from App.config import load_config
+    db.init_app(app)
+    jwt = JWTManager(app)
 
-
-from App.controllers import (
-    setup_jwt,
-    add_auth_context
-)
-
-from App.views import views, setup_admin
-
-def add_views(app):
-    for view in views:
-        app.register_blueprint(view)
-
-def create_app(overrides={}):
-    app = Flask(__name__, static_url_path='/static')
-    load_config(app, overrides)
-    CORS(app)
-    add_auth_context(app)
-    photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
-    configure_uploads(app, photos)
-    add_views(app)
-    init_db(app)
-    jwt = setup_jwt(app)
-    setup_admin(app)
-    @jwt.invalid_token_loader
-    @jwt.unauthorized_loader
-    def custom_unauthorized_response(error):
-        return render_template('401.html', error=error), 401
-    app.app_context().push()
-    return app
+    # Debug route to check all registered routes
+    @app.route('/debug-routes')
+    def debug_routes():
+        return '<pre>' + '\n'.join([str(rule) for rule in app.url_map.iter_rules()]) + '</pre>'
