@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Register</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('register') }}" id="registrationForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Register as:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" id="landlord" value="landlord" checked>
+                            <label class="form-check-label" for="landlord">
+                                Landlord
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" id="tenant" value="tenant">
+                            <label class="form-check-label" for="tenant">
+                                Tenant
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="tenantFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="lease_code" class="form-label">Lease Verification Code</label>
+                            <input type="text" class="form-control" id="lease_code" name="lease_code">
+                            <small class="text-muted">You should have received this from your landlord</small>
+                            <div id="leaseCodeFeedback" class="mt-2"></div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Register</button>
+                    <a href="{{ url_for('login') }}" class="btn btn-link">Already have an account? Login</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide tenant fields based on role selection
+    const roleRadios = document.querySelectorAll('input[name="role"]');
+    const tenantFields = document.getElementById('tenantFields');
+    
+    roleRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            tenantFields.style.display = this.value === 'tenant' ? 'block' : 'none';
+            if (this.value !== 'tenant') {
+                document.getElementById('lease_code').value = '';
+                document.getElementById('leaseCodeFeedback').innerHTML = '';
+            } else {
+                document.getElementById('lease_code').required = true;
+            }
+        });
+    });
+    
+    // Lease code validation
+    const leaseCodeInput = document.getElementById('lease_code');
+    if (leaseCodeInput) {
+        leaseCodeInput.addEventListener('input', function() {
+            const leaseCode = this.value.trim();
+            if (leaseCode.length > 0) {
+                fetch("{{ url_for('check_lease_code') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ lease_code: leaseCode })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const feedback = document.getElementById('leaseCodeFeedback');
+                    if (data.valid) {
+                        feedback.innerHTML = `
+                            <div class="alert alert-success">
+                                Valid lease code for: <strong>${data.apartment.title}</strong><br>
+                                Location: ${data.apartment.location}<br>
+                                Price: $${data.apartment.price}
+                            </div>
+                        `;
+                    } else {
+                        feedback.innerHTML = `
+                            <div class="alert alert-danger">
+                                Invalid lease code. Please check with your landlord.
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            } else {
+                document.getElementById('leaseCodeFeedback').innerHTML = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}
