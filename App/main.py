@@ -388,4 +388,25 @@ def create_app():
                 return redirect(url_for('edit_review', review_id=review_id))
         
         return render_template('edit_review.html', review=review)
+
+    @app.route('/reviews/<int:review_id>/delete', methods=['POST'])
+    @jwt_required()
+    def delete_review(review_id):
+        current_user = get_jwt_identity()
+        review = Review.query.get_or_404(review_id)
+        
+        if current_user.get('role') != 'tenant' or current_user.get('id') != review.tenant_id:
+            flash('You can only delete your own reviews', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        try:
+            apartment_id = review.apartment_id
+            db.session.delete(review)
+            db.session.commit()
+            flash('Review deleted successfully!', 'success')
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error deleting review: {str(e)}', 'danger')
+            return redirect(url_for('apartment_detail', apartment_id=review.apartment_id))
        
