@@ -43,3 +43,4 @@ class Tenant(db.Model):
     
 
 #this is how to commit
+#this is also to commit
