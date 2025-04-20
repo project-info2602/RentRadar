@@ -28,3 +28,49 @@ def create_app():
     @app.route('/debug-routes')
     def debug_routes():
         return '<pre>' + '\n'.join([str(rule) for rule in app.url_map.iter_rules()]) + '</pre>'
+    # Home and Auth Routes
+    @app.route('/')
+    def index():
+        return render_template('index.html')
+
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if request.method == 'POST':
+            try:
+                username = request.form.get('username')
+                password = request.form.get('password')
+                role = request.form.get('role')
+                
+                if not all([username, password, role]):
+                    flash('All fields are required', 'danger')
+                    return redirect(url_for('login'))
+
+                user = None
+                if role == 'landlord':
+                    user = Landlord.query.filter_by(username=username).first()
+                elif role == 'tenant':
+                    user = Tenant.query.filter_by(username=username).first()
+                else:
+                    flash('Invalid role selected', 'danger')
+                    return redirect(url_for('login'))
+
+                if not user or not user.check_password(password):
+                    flash('Invalid username or password', 'danger')
+                    return redirect(url_for('login'))
+
+                access_token = create_access_token(identity={
+                    'id': user.id,
+                    'role': role,
+                    'username': user.username
+                })
+                
+                resp = make_response(redirect(url_for('dashboard')))
+                set_access_cookies(resp, access_token)
+                flash(f'Welcome back, {user.username}!', 'success')
+                return resp
+
+            except Exception as e:
+                flash('Login failed. Please try again.', 'danger')
+                return redirect(url_for('login'))
+        
+        return render_template('login.html')
