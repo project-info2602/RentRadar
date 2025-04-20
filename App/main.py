@@ -205,4 +205,51 @@ def create_app():
                             has_reviewed=has_reviewed,
                             can_review=can_review,
                             current_user=current_user)
+    
+    @app.route('/apartments/create', methods=['GET', 'POST'])
+    @jwt_required()
+    def create_apartment():
+        current_user = get_jwt_identity()
+        if current_user.get('role') != 'landlord':
+            flash('Only landlords can create apartments', 'danger')
+            return redirect(url_for('dashboard'))
+
+        landlord = Landlord.query.get(current_user.get('id'))
+        
+        if request.method == 'POST':
+            try:
+                title = request.form.get('title')
+                description = request.form.get('description')
+                location = request.form.get('location')
+                price = float(request.form.get('price'))
+                amenities = request.form.getlist('amenities')
+                
+                if not all([title, description, location, price, amenities]):
+                    flash('All fields are required', 'danger')
+                    return redirect(url_for('create_apartment'))
+                
+                apartment = Apartment(
+                    title=title,
+                    description=description,
+                    location=location,
+                    price=price,
+                    landlord_id=landlord.id,
+                    amenities=amenities
+                )
+                
+                db.session.add(apartment)
+                db.session.commit()
+                flash(f'Apartment created successfully! Lease code: {apartment.lease_code}', 'success')
+                return redirect(url_for('apartment_detail', apartment_id=apartment.id))
+            
+            except ValueError as e:
+                db.session.rollback()
+                flash(f'Validation error: {str(e)}', 'danger')
+                return redirect(url_for('create_apartment'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error creating apartment: {str(e)}', 'danger')
+                return redirect(url_for('create_apartment'))
+        
+        return render_template('create_apartment.html', locations=LOCATIONS, amenities=AMENITIES)    
        
