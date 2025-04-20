@@ -157,4 +157,21 @@ def create_app():
         flash('You have been logged out', 'success')
         return response
 
+    # Dashboard
+    @app.route('/dashboard')
+    @jwt_required()
+    def dashboard():
+        current_user = get_jwt_identity()
+        user_id = current_user.get('id')
+        role = current_user.get('role')
+
+        if role == 'landlord':
+            user = Landlord.query.get(user_id)
+            apartments = user.apartments_owned
+            return render_template('landlord_dashboard.html', apartments=apartments, user=user)
+        else:
+            user = Tenant.query.get(user_id)
+            apartment = Apartment.query.get(user.apartment_id)
+            has_reviewed = Review.query.filter_by(tenant_id=user.id, apartment_id=user.apartment_id).first() is not None
+            return render_template('tenant_dashboard.html', apartment=apartment, user=user, has_reviewed=has_reviewed)
        
