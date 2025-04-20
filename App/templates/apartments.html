@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}All Apartments{% endblock %}
+
+{% block content %}
+<h2>Available Apartments</h2>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form action="{{ url_for('search') }}" method="GET" class="row g-3">
+            <div class="col-md-6">
+                <select name="location" class="form-select">
+                    <option value="">All Locations</option>
+                    {% for location in locations %}
+                        <option value="{{ location }}" {% if request.args.get('location') == location %}selected{% endif %}>
+                            {{ location }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="{{ url_for('apartments_list') }}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if apartments %}
+    <div class="row">
+        {% for apartment in apartments %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ apartment.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ apartment.location }}</h6>
+                    <p class="card-text">{{ apartment.description[:100] }}...</p>
+                    <p class="card-text"><strong>${{ "%.2f"|format(apartment.price) }}</strong> per month</p>
+                    <a href="{{ url_for('apartment_detail', apartment_id=apartment.id) }}" class="btn btn-primary btn-sm">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No apartments found matching your criteria.
+    </div>
+{% endif %}
+{% endblock %}
