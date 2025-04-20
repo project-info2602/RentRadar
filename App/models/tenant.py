@@ -40,3 +40,7 @@ class Tenant(db.Model):
             "email": self.email,
             "apartment_id": self.apartment_id,
         }
+    
+
+#this is how to commit
+#this is also to commit
