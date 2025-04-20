@@ -69,3 +69,30 @@
             font-family: var(--title-font);
             font-weight: bold;
         }
+
+
+        .amenities-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .amenities-list li:before {
+            content: "✓ ";
+            color: var(--secondary-color-1);
+        }
+
+        .star-rating {
+            color: var(--accent-color);
+        }
+
+        .review-card {
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary-color-1);
+            background-color: var(--card-bg);
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
