@@ -174,4 +174,35 @@ def create_app():
             apartment = Apartment.query.get(user.apartment_id)
             has_reviewed = Review.query.filter_by(tenant_id=user.id, apartment_id=user.apartment_id).first() is not None
             return render_template('tenant_dashboard.html', apartment=apartment, user=user, has_reviewed=has_reviewed)
+        
+    # Apartment Routes
+    @app.route('/apartments')
+    def apartments_list():
+        apartments = Apartment.query.all()
+        return render_template('apartments.html', apartments=apartments, locations=LOCATIONS, amenities=AMENITIES)
+
+    @app.route('/apartments/<int:apartment_id>')
+    @jwt_required(optional=True)
+    def apartment_detail(apartment_id):
+        apartment = Apartment.query.get_or_404(apartment_id)
+        reviews = Review.query.filter_by(apartment_id=apartment_id).all()
+        tenants = Tenant.query.filter_by(apartment_id=apartment_id).all()
+        
+        current_user = get_jwt_identity()
+        has_reviewed = False
+        can_review = False
+        
+        if current_user and current_user.get('role') == 'tenant':
+            tenant = Tenant.query.get(current_user.get('id'))
+            if tenant and tenant.apartment_id == apartment_id:
+                can_review = True
+                has_reviewed = Review.query.filter_by(tenant_id=tenant.id, apartment_id=apartment_id).first() is not None
+        
+        return render_template('apartment_detail.html', 
+                            apartment=apartment, 
+                            reviews=reviews, 
+                            tenants=tenants,
+                            has_reviewed=has_reviewed,
+                            can_review=can_review,
+                            current_user=current_user)
        
