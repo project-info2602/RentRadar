@@ -308,5 +308,50 @@ def create_app():
         except Exception as e:
             db.session.rollback()
             flash(f'Error deleting apartment: {str(e)}', 'danger')
-            return redirect(url_for('apartment_detail', apartment_id=apartment_id)) 
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+
+    # Review Routes
+    @app.route('/apartments/<int:apartment_id>/reviews/add', methods=['GET', 'POST'])
+    @jwt_required()
+    def add_review(apartment_id):
+        current_user = get_jwt_identity()
+        if current_user.get('role') != 'tenant':
+            flash('Only tenants can add reviews', 'danger')
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+        
+        tenant = Tenant.query.get(current_user.get('id'))
+        apartment = Apartment.query.get_or_404(apartment_id)
+        
+        if not tenant or tenant.apartment_id != apartment_id:
+            flash('You can only review your assigned apartment', 'danger')
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+        
+        # Check if already reviewed
+        existing_review = Review.query.filter_by(
+            tenant_id=tenant.id,
+            apartment_id=apartment_id
+        ).first()
+        
+        if existing_review:
+            flash('You have already reviewed this apartment', 'warning')
+            return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+        
+        if request.method == 'POST':
+            try:
+                review = Review(
+                    tenant_id=tenant.id,
+                    apartment_id=apartment_id,
+                    rating=int(request.form.get('rating')),
+                    comment=request.form.get('comment')
+                )
+                db.session.add(review)
+                db.session.commit()
+                flash('Review added successfully!', 'success')
+                return redirect(url_for('apartment_detail', apartment_id=apartment_id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error adding review: {str(e)}', 'danger')
+                return redirect(url_for('add_review', apartment_id=apartment_id))
+        
+        return render_template('add_review.html', apartment=apartment) 
        
